@@ -288,7 +288,15 @@ PROTO MineRover [
         }
       }
     ]
-    boundingObject Box { size %<= L >% %<= bodyW >% %<= H >% }
+    boundingObject Group {
+      children [
+        Box { size %<= L >% %<= bodyW >% %<= H >% }
+        Pose {
+          translation 0 0 %<= H / 2 - 0.004 >%
+          children [ Box { size %<= L >% %<= W >% 0.008 } ]
+        }
+      ]
+    }
     physics Physics {
       density -1
       mass IS chassisMass

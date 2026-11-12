@@ -1,0 +1,14 @@
+# Plain corridor; at t = 7 s rocks drop ~0.4 m ahead and the chassis gets a knock.
+# Impact + NEW obstacle -> DANGER ROOF_FALL, halt.
+name: roof_fall
+world: corridor
+duration: 60
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+events:
+  - {t: 7.0, do: roof_fall}
+end_when: {seen: ["DANGER ROOF_FALL"], nav: HOLD, settle_s: 3.0}
+expect:
+  seen: ["DANGER ROOF_FALL"]
+  final_nav: HOLD
+  no_fall: true

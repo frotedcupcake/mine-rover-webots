@@ -1,0 +1,97 @@
+# Mine rover tuning. Every threshold and speed the autonomy uses lives here.
+# Units: metres, seconds, degrees, ppm. Motor commands are fractions of top speed (-1..1).
+# Items marked (addition) are not in the original proposal table.
+
+loop_hz: 20                  # autonomy loop rate
+lamp_default_on: true        # headlamp state at start (L toggles; sweeps always switch it on)
+
+drive:
+  dead_zone: 0.35            # |command| below this produces no wheel motion (motor model)
+  min_cmd: 0.42              # smallest non-zero command the navigator will issue
+  cruise: 0.70               # 0.28 m/s
+  slow: 0.50                 # 0.20 m/s, used below navigator.slow_dist_m
+  spin: 0.55                 # in-place turn, wheels opposed
+  reverse: 0.50
+  ramp_per_s: 4.0            # command slew when speeding up; slowing/stopping is instant
+  deadman_s: 0.4             # motors stop if no fresh command for this long
+  steer_gain: 0.45           # cruise steering authority
+  heading_hold_gain: 0.02    # per degree of gyro-yaw error while cruising straight
+  motor_mismatch: 0.03       # simulated left/right motor gain mismatch (+-3 %, seeded)
+
+ultrasonic:
+  max_range_m: 4.0
+  no_echo_margin_m: 0.10     # readings within this of max range count as "no echo"
+  sample_ms: 60
+
+ir:
+  front_trigger_m: 0.12      # forward IR reports "obstacle" below this
+  floor_lost_m: 0.04         # downward IR reports "no floor" above this
+  debounce: 3                # consecutive samples needed to change state
+
+imu:
+  alpha: 0.98                # complementary filter weight on the gyro
+  gyro_bias_time_s: 2.0      # rover must sit still this long at power-up
+  impact_g: 0.9              # | |a| - 1 g | above this = impact
+  impact_refractory_s: 0.5
+  accel_trust_g: 0.15        # accel only corrects tilt when | |a| - 1 g | is below this
+  # simulated MPU6050 imperfections (added in the controller, see README "real vs faked")
+  accel_noise_mps2: 0.05
+  gyro_noise_rps: 0.003
+  gyro_bias_rps: 0.01
+
+gas:
+  noise_ppm: 6.0             # rover-side sensor model
+  lag_s: 1.0
+  warmup_s: 2.0
+
+fusion:
+  gas_danger_ppm: 800        # with rising slope -> DANGER gas build-up
+  gas_slope_ppm_s: 15
+  gas_slope_window_s: 4.0    # least-squares window
+  gas_extreme_ppm: 3000      # (addition) DANGER even if steady
+  gas_caution_ppm: 300       # (addition) steady elevated gas -> CAUTION
+  gas_caution_off_ratio: 0.8 # (addition) hysteresis: CAUTION clears below 80 % of the threshold
+  tilt_deg: 20
+  obstacle_m: 0.35
+  roof_window_s: 3.0         # obstacle must appear within this long after the impact
+  roof_obstacle_m: 0.60
+  roof_delta_m: 0.30         # ... and be at least this much closer than before the impact
+  roof_pre_window_s: 0.4     # "before the impact" look-back
+  roof_latch_s: 15.0
+  roof_approach_mps: 0.4     # (addition) own forward motion allowed for when judging "new"
+  stale_s: 0.5               # (addition) data older than this -> CAUTION + stop
+  startup_grace_s: 1.0       # staleness is not judged this early after power-up
+  hold_s: 2.0                # findings persist this long after their cause clears
+  sweep_cooldown_s: 20.0     # per hazard type
+
+navigator:
+  start_mode: AUTO           # STOP | MANUAL | AUTO
+  slow_dist_m: 0.80
+  avoid_dist_m: 0.30
+  clear_dist_m: 0.50
+  clear_time_s: 0.25
+  open_dist_m: 1.00          # at least one sonar must see this much room before leaving AVOID
+  avoid_reverse_deg: 100     # AVOID tries the other direction after turning this far
+  avoid_timeout_s: 8.0
+  backoff_reverse_s: 0.7
+  backoff_turn_deg: 60
+  backoff_turn_both_deg: 160
+  backoff_turn_timeout_s: 5.0
+  tilt_clear_deg: 10         # tilt back-off keeps reversing until tilt is below this
+  tilt_reverse_max_s: 3.0
+  bias_s: 8.0                # keep away from the edge that was found for this long
+  bias_dist_m: 0.45          # virtual obstacle distance on the biased side
+  pit_count: 3               # this many pits ...
+  pit_window_s: 120.0        # ... within this long -> STUCK "route blocked"
+  manual_block_m: 0.15       # manual forward refused when something is this close
+
+sweep:
+  angles_deg: [-90, -45, 0, 45, 90]
+  settle_s: 0.35
+  tolerance_deg: 2.0
+  timeout_s: 25.0
+  jpeg_quality: 85
+
+log:
+  csv_hz: 5
+  status_period_s: 1.0

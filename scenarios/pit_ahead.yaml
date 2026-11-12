@@ -1,0 +1,12 @@
+# Full-width pit: must report CAUTION, never fall, and give up as STUCK "route blocked".
+name: pit_ahead
+world: pit_ahead
+duration: 240
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+end_when: {nav: STUCK, settle_s: 2.0, fell: true}
+expect:
+  seen: ["CAUTION FLOOR_LOST"]
+  no_fall: true
+  final_nav: STUCK
+  final_note_contains: "route blocked"

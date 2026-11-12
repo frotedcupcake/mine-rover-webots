@@ -1,0 +1,17 @@
+# Full mine run: rubble, half-width pit, 90 degree bend, more rubble, then the gas source.
+name: mine
+world: mine
+duration: 300
+render: false
+start_jitter: {x: 0.04, y: 0.06, yaw_deg: 4}
+regions:
+  past_pit: {x_min: 7.0}
+  tunnel_b: {y_min: 1.0, x_min: 7.9}
+end_when: {seen: ["DANGER GAS_BUILDUP"], nav: HOLD, settle_s: 3.0, fell: true}
+expect:
+  max_collisions: 0
+  no_fall: true
+  reach: [past_pit, tunnel_b]
+  seen: ["DANGER GAS_BUILDUP"]
+  final_nav: HOLD
+  max_gas_distance_m: 2.5

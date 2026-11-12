@@ -1,0 +1,12 @@
+# Half-width pit on the left: get past it on the right, never fall.
+name: side_pit
+world: side_pit
+duration: 180
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+regions:
+  past_pit: {x_min: 5.2}
+end_when: {reach: past_pit, settle_s: 0.5, fell: true}
+expect:
+  reach: [past_pit]
+  no_fall: true

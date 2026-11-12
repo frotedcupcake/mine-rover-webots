@@ -1,0 +1,11 @@
+# 25 degree ramp: tilt goes over 20 degrees -> CAUTION TILT and a back-off.
+name: ramp
+world: ramp
+duration: 90
+render: false
+start_jitter: {x: 0.05, y: 0.06, yaw_deg: 3}
+end_when: {seen: ["CAUTION TILT"], nav: [CRUISE, AVOID, STUCK], settle_s: 3.0}
+expect:
+  seen: ["CAUTION TILT"]
+  nav_seen: [BACKOFF]
+  no_fall: true

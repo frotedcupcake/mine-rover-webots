@@ -1,0 +1,13 @@
+# Gas source ahead: DANGER gas build-up, then HOLD, with a 5-image camera sweep.
+# Needs rendering (camera images), so it runs in fast mode with the 3D view minimised.
+name: gas_ahead
+world: gas_ahead
+duration: 120
+render: true
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+end_when: {seen: ["DANGER GAS_BUILDUP"], nav: HOLD, settle_s: 3.0}
+expect:
+  seen: ["DANGER GAS_BUILDUP"]
+  final_nav: HOLD
+  min_images: 5
+  max_collisions: 0

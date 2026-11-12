@@ -1,0 +1,13 @@
+# Rubble piles in a straight tunnel: steer around them, reach the far end, touch nothing.
+name: obstacles
+world: obstacles
+duration: 120
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+regions:
+  end: {x_min: 7.0}
+end_when: {reach: end, settle_s: 0.5}
+expect:
+  reach: [end]
+  max_collisions: 0
+  no_fall: true

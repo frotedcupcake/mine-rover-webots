@@ -345,7 +345,7 @@ WorldInfo {{
     }}
   ]
 }}
-Viewpoint {{
+DEF VIEW Viewpoint {{
   orientation 0 1 0 0.3
   position {f(x - 1.1 * math.cos(yaw))} {f(y - 1.1 * math.sin(yaw))} 0.62
   near 0.02
@@ -368,6 +368,7 @@ DEF ROVER MineRover {{
 Robot {{
   name "mine_supervisor"
   controller "mine_supervisor"
+  customData "{self.name}"
   supervisor TRUE
   children [
     Emitter {{ channel 1 }}

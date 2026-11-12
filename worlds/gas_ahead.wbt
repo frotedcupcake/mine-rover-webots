@@ -39,7 +39,7 @@ WorldInfo {
     }
   ]
 }
-Viewpoint {
+DEF VIEW Viewpoint {
   orientation 0 1 0 0.3
   position -0.5 0 0.62
   near 0.02
@@ -62,6 +62,7 @@ DEF ROVER MineRover {
 Robot {
   name "mine_supervisor"
   controller "mine_supervisor"
+  customData "gas_ahead"
   supervisor TRUE
   children [
     Emitter { channel 1 }
