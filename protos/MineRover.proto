@@ -1,0 +1,298 @@
+#VRML_SIM R2025a utf8
+# license: MIT
+# template language: javascript
+# ECE357 "Autonomous Mine Rover for Damage and Danger Assessment".
+# 4WD skid-steer rover. Axes: X forward, Y left, Z up. Origin = chassis centre.
+# Every dimension is a field so the model can follow the real build.
+
+PROTO MineRover [
+  field SFVec3f    translation     0 0 0.066
+  field SFRotation rotation        0 0 1 0
+  field SFString   name            "rover"
+  field SFString   controller      "rover_controller"
+  field MFString   controllerArgs  []
+  field SFString   customData      ""
+  # --- chassis ---
+  field SFFloat    chassisLength   0.25      # m, along X
+  field SFFloat    chassisWidth    0.20      # m, along Y (deck width; the body between the wheels is narrower)
+  field SFFloat    chassisHeight   0.07      # m, along Z
+  field SFFloat    chassisMass     1.3       # kg (chassis + electronics; wheels add 4 x wheelMass => ~1.5 kg)
+  field SFFloat    groundClearance 0.03      # m, floor to chassis underside
+  field SFColor    chassisColor    0.85 0.55 0.08
+  field SFBool     useMeshes       FALSE     # TRUE: draw chassisMesh instead of the box (collision stays a box)
+  field MFString   chassisMesh     "../meshes/chassis.stl"   # metres, X forward, Z up, origin at chassis centre
+  # --- drive ---
+  field SFFloat    wheelDiameter   0.065     # m
+  field SFFloat    wheelWidth      0.025     # m
+  field SFFloat    wheelbase       0.16      # m, front axle to rear axle
+  field SFFloat    track           0.18      # m, left wheel centre to right wheel centre
+  field SFFloat    wheelMass       0.05      # kg each
+  field SFFloat    topSpeed        0.4       # m/s at 100 % command
+  field SFFloat    wheelMaxTorque  0.15      # N.m per wheel
+  # --- sensors ---
+  field SFFloat    sonarAngle      0.4363    # rad, us_left aimed +, us_right aimed - (25 deg)
+  field SFFloat    sonarAperture   0.2618    # rad (15 deg)
+  field SFFloat    sonarSpacing    0.12      # m between the two sonars on the bumper
+  field SFFloat    sonarMaxRange   4.0       # m
+  field SFFloat    frontIrSpacing  0.16      # m between the two forward IR sensors
+  field SFFloat    frontIrRange    0.30      # m, analogue range; the 0.12 m trigger is in config/rover.yaml
+  field SFFloat    downIrAhead     0.05      # m ahead of the front axle
+  field SFFloat    downIrHeight    0.02      # m above the floor
+  field SFFloat    downIrRange     0.10      # m
+  # --- pan head ---
+  field SFFloat    panRange        2.0944    # rad, +-120 deg
+  field SFFloat    panSpeed        1.0472    # rad/s, 60 deg/s
+  field SFInt32    cameraWidth     640
+  field SFInt32    cameraHeight    480
+  field SFFloat    cameraFov       1.0472    # rad, 60 deg
+  field SFFloat    lampIntensity   2.5
+]
+{
+  %<
+    const L = fields.chassisLength.value;
+    const W = fields.chassisWidth.value;
+    const H = fields.chassisHeight.value;
+    const gc = fields.groundClearance.value;
+    const R = fields.wheelDiameter.value / 2;
+    const ww = fields.wheelWidth.value;
+    const wb = fields.wheelbase.value;
+    const tr = fields.track.value;
+    const centreZ = gc + H / 2;            // chassis centre above the floor
+    const axleZ = R - centreZ;             // axle height relative to chassis centre
+    const maxW = fields.topSpeed.value / R;
+    const sa = fields.sonarAngle.value;
+    const ss = fields.sonarSpacing.value / 2;
+    const fis = fields.frontIrSpacing.value / 2;
+    const dix = wb / 2 + fields.downIrAhead.value;
+    const diz = fields.downIrHeight.value - centreZ;
+    const bodyW = Math.max(0.04, tr - ww - 0.012);   // body between the wheels
+    const wheels = [
+      {n: 'fl', x:  wb / 2, y:  tr / 2},
+      {n: 'fr', x:  wb / 2, y: -tr / 2},
+      {n: 'rl', x: -wb / 2, y:  tr / 2},
+      {n: 'rr', x: -wb / 2, y: -tr / 2}
+    ];
+  >%
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    controllerArgs IS controllerArgs
+    customData IS customData
+    model "ECE357 mine rover"
+    contactMaterial "chassis"
+    children [
+      # ---------------- chassis visual ----------------
+      %< if (fields.useMeshes.value) { >%
+      Shape {
+        appearance PBRAppearance { baseColor IS chassisColor roughness 0.6 metalness 0.2 }
+        geometry Mesh { url IS chassisMesh }
+      }
+      %< } else { >%
+      Shape {
+        appearance PBRAppearance { baseColor IS chassisColor roughness 0.6 metalness 0.2 }
+        geometry Box { size %<= L >% %<= bodyW >% %<= H >% }
+      }
+      Pose {
+        translation 0 0 %<= H / 2 - 0.004 >%
+        children [
+          Shape {
+            appearance PBRAppearance { baseColor 0.12 0.12 0.13 roughness 0.8 metalness 0.1 }
+            geometry Box { size %<= L >% %<= W >% 0.008 }
+          }
+        ]
+      }
+      Pose {
+        translation %<= L / 2 - 0.004 >% 0 %<= H / 4 >%
+        children [
+          Shape {
+            appearance PBRAppearance { baseColor 0.1 0.1 0.1 roughness 0.9 metalness 0 }
+            geometry Box { size 0.008 %<= W >% %<= H / 2 >% }
+          }
+        ]
+      }
+      %< } >%
+      # ---------------- wheels ----------------
+      %< for (const w of wheels) { >%
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          axis 0 1 0
+          anchor %<= w.x >% %<= w.y >% %<= axleZ >%
+        }
+        device [
+          RotationalMotor {
+            name "wheel_%<= w.n >%"
+            maxVelocity %<= maxW >%
+            maxTorque IS wheelMaxTorque
+          }
+          PositionSensor {
+            name "wheel_%<= w.n >%_sensor"
+          }
+        ]
+        endPoint Solid {
+          translation %<= w.x >% %<= w.y >% %<= axleZ >%
+          rotation 1 0 0 1.5707963
+          name "wheel_%<= w.n >%"
+          contactMaterial "wheel"
+          children [
+            Shape {
+              appearance PBRAppearance { baseColor 0.06 0.06 0.06 roughness 0.95 metalness 0 }
+              geometry Cylinder { radius %<= R >% height %<= ww >% subdivision 20 }
+            }
+            Shape {
+              appearance PBRAppearance { baseColor 0.8 0.75 0.2 roughness 0.6 metalness 0.3 }
+              geometry Box { size %<= R * 1.2 >% %<= R * 0.3 >% %<= ww + 0.002 >% }
+            }
+          ]
+          boundingObject Cylinder { radius %<= R >% height %<= ww >% subdivision 24 }
+          physics Physics { density -1 mass IS wheelMass }
+        }
+      }
+      %< } >%
+      # ---------------- ultrasonic (HC-SR04 stand-ins) ----------------
+      %< for (const s of [{n: 'left', sg: 1}, {n: 'right', sg: -1}]) { >%
+      DistanceSensor {
+        translation %<= L / 2 + 0.006 >% %<= s.sg * ss >% 0.02
+        rotation 0 0 1 %<= s.sg * sa >%
+        name "us_%<= s.n >%"
+        type "sonar"
+        numberOfRays 12
+        aperture IS sonarAperture
+        lookupTable [
+          0 0.02 0
+          0.02 0.02 0.01
+          %<= fields.sonarMaxRange.value >% %<= fields.sonarMaxRange.value >% 0.01
+        ]
+        children [
+          Shape {
+            appearance PBRAppearance { baseColor 0.1 0.25 0.6 roughness 0.6 metalness 0 }
+            geometry Box { size 0.012 0.045 0.02 }
+          }
+        ]
+      }
+      %< } >%
+      # ---------------- forward IR obstacle sensors ----------------
+      %< for (const s of [{n: 'left', sg: 1}, {n: 'right', sg: -1}]) { >%
+      DistanceSensor {
+        translation %<= L / 2 + 0.006 >% %<= s.sg * fis >% 0.012
+        name "ir_front_%<= s.n >%"
+        type "infra-red"
+        redColorSensitivity 0
+        lookupTable [
+          0 0 0
+          %<= fields.frontIrRange.value >% %<= fields.frontIrRange.value >% 0.02
+        ]
+        children [
+          Shape {
+            appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 0.5 metalness 0 }
+            geometry Box { size 0.01 0.02 0.012 }
+          }
+        ]
+      }
+      %< } >%
+      # ---------------- downward IR floor sensors ----------------
+      %< for (const s of [{n: 'left', sg: 1}, {n: 'right', sg: -1}]) { >%
+      DistanceSensor {
+        translation %<= dix >% %<= s.sg * tr / 2 >% %<= diz >%
+        rotation 0 1 0 1.5707963
+        name "ir_down_%<= s.n >%"
+        type "infra-red"
+        redColorSensitivity 0
+        lookupTable [
+          0 0 0
+          %<= fields.downIrRange.value >% %<= fields.downIrRange.value >% 0.02
+        ]
+        children [
+          Shape {
+            appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 0.5 metalness 0 }
+            geometry Box { size 0.012 0.012 0.012 }
+          }
+        ]
+      }
+      %< } >%
+      # ---------------- IMU (MPU6050 stand-in; noise/bias added in the controller) ----------------
+      Accelerometer { name "accelerometer" }
+      Gyro { name "gyro" }
+      InertialUnit { name "inertial_unit" }
+      # ---------------- radio ----------------
+      Receiver { name "receiver" channel 1 }
+      Emitter { name "emitter" channel 2 }
+      # ---------------- pan head: camera + headlamp ----------------
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          axis 0 0 1
+          anchor %<= L / 2 - 0.05 >% 0 %<= H / 2 >%
+        }
+        device [
+          RotationalMotor {
+            name "pan_motor"
+            maxVelocity IS panSpeed
+            minPosition %<= -fields.panRange.value >%
+            maxPosition %<= fields.panRange.value >%
+            maxTorque 1
+          }
+          PositionSensor { name "pan_sensor" }
+        ]
+        endPoint Solid {
+          translation %<= L / 2 - 0.05 >% 0 %<= H / 2 >%
+          name "pan_head"
+          children [
+            Pose {
+              translation 0 0 0.02
+              children [
+                Shape {
+                  appearance PBRAppearance { baseColor 0.15 0.15 0.16 roughness 0.7 metalness 0.2 }
+                  geometry Cylinder { radius 0.012 height 0.04 }
+                }
+              ]
+            }
+            Pose {
+              translation 0.005 0 0.055
+              children [
+                Shape {
+                  appearance PBRAppearance { baseColor 0.15 0.15 0.16 roughness 0.7 metalness 0.2 }
+                  geometry Box { size 0.035 0.07 0.035 }
+                }
+              ]
+            }
+            Camera {
+              translation 0.025 0.012 0.055
+              name "camera"
+              fieldOfView IS cameraFov
+              width IS cameraWidth
+              height IS cameraHeight
+              near 0.02
+            }
+            LED {
+              translation 0.025 -0.018 0.055
+              name "headlamp"
+              color [ 1 0.95 0.8 ]
+              children [
+                SpotLight {
+                  attenuation 0 0 1
+                  beamWidth 0.55
+                  cutOffAngle 0.8
+                  direction 1 0 -0.12
+                  intensity IS lampIntensity
+                  radius 10
+                  castShadows FALSE
+                }
+                Shape {
+                  appearance PBRAppearance { baseColor 0.3 0.3 0.3 roughness 0.3 metalness 0 }
+                  geometry Sphere { radius 0.008 subdivision 2 }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+    boundingObject Box { size %<= L >% %<= bodyW >% %<= H >% }
+    physics Physics {
+      density -1
+      mass IS chassisMass
+      centerOfMass [ 0 0 -0.01 ]
+    }
+  }
+}

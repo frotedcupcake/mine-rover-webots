@@ -1,0 +1,78 @@
+#VRML_SIM R2025a utf8
+# license: MIT
+# template language: javascript
+# A static pile of broken rock for the mine rover to steer around.
+# Mostly rounded rocks (spheres) so an ultrasonic sensor gets an echo from any side.
+
+PROTO Rubble [
+  field SFVec3f    translation 0 0 0
+  field SFRotation rotation    0 0 1 0
+  field SFString   name        "rubble"
+  field SFFloat    size        0.4     # footprint diameter of the pile (m)
+  field SFFloat    height      0.2     # approximate pile height (m)
+]
+{
+  %<
+    const s = fields.size.value / 0.4;
+    const hz = fields.height.value / 0.2;
+    // x, y, radius (for a 0.4 m pile), vertical squash
+    const rocks = [
+      [ 0.00,  0.00, 0.105, 0.95],
+      [ 0.10,  0.07, 0.080, 0.80],
+      [-0.09,  0.08, 0.075, 0.75],
+      [ 0.08, -0.09, 0.078, 0.70],
+      [-0.10, -0.07, 0.082, 0.80],
+      [ 0.00,  0.135, 0.058, 0.60],
+      [ 0.01, -0.140, 0.055, 0.60],
+      [ 0.145, 0.00, 0.052, 0.55],
+      [-0.150, 0.01, 0.050, 0.55]
+    ];
+  >%
+  Solid {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    model "rubble pile"
+    children [
+      %< for (const r of rocks) { >%
+      Pose {
+        translation %<= r[0] * s >% %<= r[1] * s >% %<= r[2] * s * r[3] * hz * 0.75 >%
+        children [
+          Shape {
+            appearance PBRAppearance {
+              baseColorMap ImageTexture { url [ "textures/rubble.jpg" ] }
+              roughness 1
+              metalness 0
+            }
+            geometry Sphere { radius %<= r[2] * s >% subdivision 2 }
+          }
+        ]
+      }
+      %< } >%
+      Pose {
+        translation %<= 0.04 * s >% %<= -0.02 * s >% %<= 0.15 * hz >%
+        rotation 0.5 0.3 0.8 0.9
+        children [
+          Shape {
+            appearance PBRAppearance {
+              baseColorMap ImageTexture { url [ "textures/rubble.jpg" ] }
+              roughness 1
+              metalness 0
+            }
+            geometry Box { size %<= 0.11 * s >% %<= 0.08 * s >% %<= 0.07 * s >% }
+          }
+        ]
+      }
+    ]
+    boundingObject Group {
+      children [
+        %< for (const r of rocks) { >%
+        Pose {
+          translation %<= r[0] * s >% %<= r[1] * s >% %<= r[2] * s * r[3] * hz * 0.75 >%
+          children [ Sphere { radius %<= r[2] * s >% } ]
+        }
+        %< } >%
+      ]
+    }
+  }
+}

@@ -1,0 +1,43 @@
+#VRML_SIM R2025a utf8
+# license: MIT
+# Visual marker for a simulated gas source: a faint translucent greenish sphere with a
+# dim green glow. It has no collision and no physics; the concentration field itself is
+# computed by the mine_supervisor controller from config/gas_sources/<world>.yaml.
+
+PROTO GasMarker [
+  field SFVec3f  translation  0 0 0.35
+  field SFString name         "gas marker"
+  field SFFloat  radius       0.6
+  field SFColor  color        0.35 1 0.45
+  field SFFloat  transparency 0.86
+  field SFFloat  glow         0.25     # intensity of the green point light (0 = off)
+]
+{
+  Solid {
+    translation IS translation
+    name IS name
+    model "gas marker"
+    children [
+      Shape {
+        appearance PBRAppearance {
+          baseColor IS color
+          emissiveColor IS color
+          emissiveIntensity 0.35
+          transparency IS transparency
+          roughness 1
+          metalness 0
+        }
+        geometry Sphere { radius IS radius subdivision 3 }
+        castShadows FALSE
+        isPickable FALSE
+      }
+      PointLight {
+        attenuation 0 0 1
+        color IS color
+        intensity IS glow
+        radius 4
+        castShadows FALSE
+      }
+    ]
+  }
+}

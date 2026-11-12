@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+# Webots per-world GUI state and temporary seeded copies of worlds
+worlds/.*.wbproj
+worlds/.*.jpg
+worlds/_run_*.wbt
+# run outputs (the demo folder and the final pass-rate table are kept)
+reports/*
+!reports/demo/
+!reports/scenario_results.md
+!reports/.gitkeep
