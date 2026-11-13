@@ -1,14 +1,21 @@
 # Plain corridor; at t = 7 s rocks drop ~0.4 m ahead and the chassis gets a knock.
-# Impact + NEW obstacle -> DANGER ROOF_FALL, halt.
+# Impact + NEW obstacle -> DANGER ROOF_FALL: halt, sweep, hold 30 s, then RETURN and HOME.
 name: roof_fall
 world: corridor
-duration: 60
+duration: 180
 render: false
 start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
 events:
   - {t: 7.0, do: roof_fall}
-end_when: {seen: ["DANGER ROOF_FALL"], nav: HOLD, settle_s: 3.0}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
 expect:
   seen: ["DANGER ROOF_FALL"]
-  final_nav: HOLD
   no_fall: true
+  holds: 1
+  hold_min_s: 30
+  returns: true
+  return_reason: "danger hold finished"
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true

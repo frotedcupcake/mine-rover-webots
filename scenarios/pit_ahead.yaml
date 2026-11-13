@@ -1,12 +1,18 @@
-# Full-width pit: must report CAUTION, never fall, and give up as STUCK "route blocked".
+# Full-width pit: must report CAUTION, never fall, and turn back: a full-width pit counts as
+# blocked ahead -> RETURN -> HOME (both floor IRs at once = "full-width pit"; one IR first =
+# sidesteps until "3 pits in 2 minutes").
 name: pit_ahead
 world: pit_ahead
-duration: 240
+duration: 300
 render: false
 start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
-end_when: {nav: STUCK, settle_s: 2.0, fell: true}
+end_when: {uploaded: true, settle_s: 2.0, fell: true, or_nav: [STUCK]}
 expect:
   seen: ["CAUTION FLOOR_LOST"]
   no_fall: true
-  final_nav: STUCK
-  final_note_contains: "route blocked"
+  returns: true
+  return_reason: "pit"
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true

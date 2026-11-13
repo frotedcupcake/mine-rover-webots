@@ -84,7 +84,6 @@ navigator:
   avoid_timeout_s: 8.0
   backoff_reverse_s: 0.7
   backoff_turn_deg: 60
-  backoff_turn_both_deg: 160
   backoff_turn_timeout_s: 5.0
   tilt_clear_deg: 10         # tilt back-off keeps reversing until tilt is below this
   tilt_reverse_max_s: 3.0
@@ -96,8 +95,60 @@ navigator:
   centre_max_m: 1.6          # both sonars under this -> drift gently to the more open side
   centre_deadband_m: 0.10
   pit_count: 3               # this many pits ...
-  pit_window_s: 120.0        # ... within this long -> STUCK "route blocked"
+  pit_window_s: 120.0        # ... within this long -> RETURN (counted per leg: in / return)
   manual_block_m: 0.15       # manual forward refused when something is this close
+  # RETURN mode (no operator underground): blocked ahead, battery reserve, mission timer or a
+  # finished Danger hold turn the rover round; it steers on route heading + 180 deg.
+  danger_hold_s: 30          # on DANGER: stop, finish the sweep, log, hold this long, then RETURN
+  mission_time_s: 900        # 15 min after the trip starts -> RETURN (backstop)
+  return_time_factor: 1.2    # HOME when return driving time reaches this x outward driving time
+                             #   (or as soon as the link is back); driving only, not sweeps/holds
+  return_turn_tol_deg: 20    # the turn-round first turns to within this of the new route heading;
+                             #   from there the normal AVOID exit rules apply
+
+link:                        # dashboard radio link (laptop at the entrance)
+  link_range_m: 3.0          # link comes up within this distance of the entrance ...
+  link_hyst_m: 0.3           # ... and drops this much further out (hysteresis)
+  link_timeout_s: 0.5        # no heartbeat for this long = link down
+  upload_retry_s: 2.0        # at HOME with the link down: try the upload again this often
+
+battery:
+  # Real rover: 3S2P Li-ion NMC, 4000 mAh (full 12.6 V, nominal 10.8-11.1 V). Voltage only, no
+  # current sensor. Divider on Uno A1: 22k to +BATT, 10k to GND -> pack V = pin V x 3.2.
+  # The Uno sends batt_x10 = averaged ADC count x 10:
+  #   V = (batt_x10 / 10) / adc_max * adc_ref_v * divider_ratio * scale
+  adc_ref_v: 5.0
+  adc_max: 1023
+  divider_ratio: 3.2
+  scale: 1.0                 # calibration factor, 1.0 until measured against a multimeter
+  avg_window_s: 5.0          # thresholds are judged on this moving average (motor load sag)
+  # Starting values, to be tuned on the real pack. Must hold: return_v > warn_v > critical_v.
+  # Each one latches: once the average has been below it, a recovering voltage changes nothing.
+  return_v: 10.5             # -> RETURN
+  warn_v: 10.2               # -> warning on the dashboard and in the run summary (no driving change)
+  critical_v: 9.6            # -> rover stops: STUCK "battery critical", log flushed
+  sim:                       # simulated pack only (placeholders until measured)
+    cells: 3
+    capacity_mah: 4000
+    start_charge: 1.0        # 0..1; scenarios lower this to test the reserve
+    drive_a: 2.0             # current at cruise command
+    idle_a: 0.6              # current standing still
+    internal_r_ohm: 0.15     # sag = current x this (about 0.3 V driving, 0.1 V idle)
+    noise_v: 0.01
+    ocv_cell_v:              # [charge, open-circuit volts per cell]
+      - [0.00, 3.00]
+      - [0.02, 3.30]
+      - [0.05, 3.45]
+      - [0.10, 3.60]
+      - [0.20, 3.70]
+      - [0.30, 3.76]
+      - [0.40, 3.80]
+      - [0.50, 3.85]
+      - [0.60, 3.90]
+      - [0.70, 3.96]
+      - [0.80, 4.03]
+      - [0.90, 4.11]
+      - [1.00, 4.20]
 
 sweep:
   angles_deg: [-90, -45, 0, 45, 90]

@@ -1,13 +1,22 @@
-# Gas source ahead: DANGER gas build-up, then HOLD, with a 5-image camera sweep.
+# Gas source ahead: DANGER gas build-up, a 5-image camera sweep, hold 30 s within 2.5 m of
+# the gas, then RETURN and HOME with the log uploaded ("Danger then return", short tunnel).
 # Needs rendering (camera images), so it runs in fast mode with the 3D view minimised.
 name: gas_ahead
 world: gas_ahead
-duration: 120
+duration: 240
 render: true
 start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
-end_when: {seen: ["DANGER GAS_BUILDUP"], nav: HOLD, settle_s: 3.0}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
 expect:
   seen: ["DANGER GAS_BUILDUP"]
-  final_nav: HOLD
   min_images: 5
   max_collisions: 0
+  max_gas_distance_m: 2.5
+  holds: 1
+  hold_min_s: 30
+  returns: true
+  return_reason: "danger hold finished"
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true

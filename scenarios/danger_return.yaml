@@ -1,0 +1,22 @@
+# Danger then return, in a tunnel long enough for the link to drop: gas near the far end ->
+# DANGER, sweep, hold 30 s within 2.5 m, RETURN, link back, HOME, upload.
+name: danger_return
+world: gas_return
+duration: 300
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
+expect:
+  seen: ["DANGER GAS_BUILDUP"]
+  max_gas_distance_m: 2.5
+  holds: 1
+  hold_min_s: 30
+  returns: true
+  return_reason: "danger hold finished"
+  link_dropped: true
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true
+  max_collisions: 0
+  no_fall: true

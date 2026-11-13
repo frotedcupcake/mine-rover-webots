@@ -1,0 +1,26 @@
+# Second gas pocket on the way back: as danger_return, but once the rover has turned back a
+# new pocket appears on its route home. The gas it is leaving must not stop it again; the new
+# pocket (reading fell below the threshold, then rose again) must: a second sweep and 30 s
+# hold, then it keeps returning, HOME, upload.
+name: gas_return
+world: gas_return
+duration: 360
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+events:
+  - {when: return, do: gas_source, at: [5.0, 0.0], peak: 2500, sigma: 1.0, ramp_up: 5.0, trigger: 2.5}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
+expect:
+  seen: ["DANGER GAS_BUILDUP"]
+  max_gas_distance_m: 2.5
+  holds: 2
+  hold_min_s: 30
+  returns: true
+  return_reason: "danger hold finished"
+  link_dropped: true
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true
+  max_collisions: 0
+  no_fall: true

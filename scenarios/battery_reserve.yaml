@@ -1,0 +1,22 @@
+# Battery reserve: the mine run on a nearly flat pack. The 5 s average voltage falls below
+# the return threshold part-way in -> RETURN (latched), HOME, upload. The 15 min mission
+# timer would normally come first, so the starting charge is set low.
+name: battery_reserve
+world: mine
+duration: 360
+render: false
+start_jitter: {x: 0.04, y: 0.06, yaw_deg: 4}
+cfg:
+  battery: {sim: {start_charge: 0.105}}
+end_when: {uploaded: true, settle_s: 2.0, fell: true, or_nav: [STUCK]}
+expect:
+  returns: true
+  return_reason: "battery reserve"
+  battery_level: [RETURN, WARN]
+  link_dropped: true
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true
+  max_collisions: 0
+  no_fall: true

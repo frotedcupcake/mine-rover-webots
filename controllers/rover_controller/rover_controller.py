@@ -10,6 +10,7 @@ uses it.
 import json
 import math
 import os
+import shutil
 import sys
 import time
 
@@ -21,11 +22,12 @@ from controller import Keyboard, Robot  # noqa: E402
 
 from rover_core import caption, config  # noqa: E402
 from rover_core.attitude import AttitudeFilter, ImuErrorModel  # noqa: E402
+from rover_core.battery import BatteryMonitor, BatterySim  # noqa: E402
 from rover_core.conditioning import Debounce, Readings, UltrasonicFilter  # noqa: E402
 from rover_core.fusion import HAZARD_LEVEL, HazardFusion  # noqa: E402
 from rover_core.gas_model import GasSensorModel  # noqa: E402
 from rover_core.hazard_log import HazardLog  # noqa: E402
-from rover_core.navigator import MANUAL, MotorGuard, Navigator  # noqa: E402
+from rover_core.navigator import HOME, MANUAL, MotorGuard, Navigator  # noqa: E402
 from rover_core.sweep import SweepSequencer  # noqa: E402
 
 REMOTE_KEYS = {"resume": "R", "sweep": "C", "auto": "SHIFT_A", "stop": "X", "manual": "M", "estop": "SPACE",
@@ -99,6 +101,22 @@ class Rover:
         import random
         rng = random.Random(self.seed + 7)
         self.gain = {"l": 1.0 + rng.uniform(-mm, mm), "r": 1.0 + rng.uniform(-mm, mm)}
+        # battery: the simulated pack produces what the Uno would send (batt_x10 ADC counts);
+        # the monitor and the navigator only ever see that voltage
+        self.batt_sim = BatterySim(cfg, seed=self.seed + 2000)
+        self.batt_mon = BatteryMonitor(cfg)
+        self.batt = self.batt_mon.status
+        self.batt_level_prev = self.batt.level
+        self.last_cmd = (0.0, 0.0)
+        # dashboard link (heartbeat in the supervisor's radio message)
+        self.t_link = -1e9
+        self.link_up = False
+        self.link_prev = None
+        self.uploaded = False
+        self.next_upload = 0.0
+        self.upload_waiting = False
+        self.t_return = self.t_home = self.t_upload = None
+        self.prev_dir = None
 
         # ---- state ----
         self.gas_true = None
@@ -192,7 +210,12 @@ class Rover:
                 self.run_name = msg["run"]
             if msg.get("gas") is not None:
                 self.gas_true, self.t_gas = float(msg["gas"]), t
+            if msg.get("link"):
+                self.t_link = t                     # heartbeat from the dashboard
+            if msg.get("batt_charge") is not None:  # test hook: set the simulated pack's charge
+                self.batt_sim.set_charge(msg["batt_charge"])
             self.remote.extend(msg.get("cmd") or [])
+        self.link_up = t - self.t_link <= self.cfg["link"]["link_timeout_s"]
 
     # ------------------------------------------------------------------
     def cycle(self, t):
@@ -220,8 +243,12 @@ class Rover:
         a = self.fusion.update(r)
         keys = self.read_keys()
         ready = self.att.calibrated and r.gas_ppm is not None
-        cmd = self.nav.step(t, r, a, keys=keys, sweep_busy=self.seq.busy, ready=ready)
+        # battery: voltage under the load of the command now being applied
+        self.batt = self.batt_mon.update(t, self.batt_sim.update(self.loop_div * self.ts / 1000.0, *self.last_cmd))
+        cmd = self.nav.step(t, r, a, keys=keys, sweep_busy=self.seq.busy, ready=ready,
+                            battery=self.batt, link_up=self.link_up)
         self.guard.set(t, cmd.left, cmd.right)
+        self.last_cmd = (cmd.left, cmd.right)
 
         if cmd.lamp_toggle:
             self.lamp_manual = not self.lamp_manual
@@ -234,9 +261,78 @@ class Rover:
         self.sweep(t, r, a, cmd)
         if have_log:
             self.record(t, r, a, cmd, impact)
+            self.trip(t, cmd)
         self.truth_stats()
         self.telemetry(t, a, cmd)
         return r, a, cmd
+
+    # ------------------------------------------------------------------
+    def trip_info(self, cmd):
+        b, bc = self.batt, self.cfg["battery"]
+
+        def rnd(v, nd=2):
+            return None if v is None else round(v, nd)
+        return {"direction": cmd.direction, "return_reason": cmd.return_reason, "t_return": rnd(self.t_return),
+                "home": cmd.state == HOME, "t_home": rnd(self.t_home), "uploaded": self.uploaded,
+                "t_upload": rnd(self.t_upload), "out_s": rnd(self.nav.out_s, 1), "ret_s": rnd(self.nav.ret_s, 1),
+                "link": "up" if self.link_up else "down", "batt_level": b.level, "batt_v": rnd(b.volts),
+                "batt_avg_v": rnd(b.avg_v), "batt_min_avg_v": rnd(b.min_avg_v), "batt_t_return": rnd(b.t_return),
+                "batt_t_warn": rnd(b.t_warn), "batt_t_critical": rnd(b.t_critical),
+                "batt_return_v": bc["return_v"], "batt_warn_v": bc["warn_v"], "batt_critical_v": bc["critical_v"]}
+
+    def trip(self, t, cmd):
+        """Trip events (return, home, battery levels, link), log flushes and the upload at HOME."""
+        log = self.log
+        if self.link_up != self.link_prev:
+            log.event(t, "link", up=self.link_up)
+            self.link_prev = self.link_up
+        if self.batt.level != self.batt_level_prev:
+            log.event(t, "battery", level=self.batt.level, avg_v=round(self.batt.avg_v, 2), volts=round(self.batt.volts, 2))
+            print(f"[rover] t={t:.2f} battery {self.batt.level}: 5 s average {self.batt.avg_v:.2f} V", flush=True)
+            self.batt_level_prev = self.batt.level
+        if cmd.direction != self.prev_dir:
+            if cmd.direction == "RETURN":
+                self.t_return = t
+                log.event(t, "return", reason=cmd.return_reason, out_s=round(self.nav.out_s, 1))
+                print(f"[rover] t={t:.2f} RETURN: {cmd.return_reason}", flush=True)
+            elif self.prev_dir is not None:
+                self.t_return = self.t_home = None
+                log.event(t, "trip", direction=cmd.direction)
+            self.prev_dir = cmd.direction
+        if cmd.state == HOME and self.t_home is None:
+            self.t_home = t
+            log.event(t, "home", note=cmd.note, ret_s=round(self.nav.ret_s, 1), link=self.link_up)
+            print(f"[rover] t={t:.2f} {cmd.note}", flush=True)
+        if cmd.state != HOME:                      # (R at HOME starts a new trip)
+            self.uploaded, self.upload_waiting, self.t_home = False, False, None
+        log.trip = self.trip_info(cmd)
+        if cmd.flush:
+            log.flush()
+            log.event(t, "flush", state=cmd.state, note=cmd.note)
+        if cmd.state == HOME and not self.uploaded and t >= self.next_upload:
+            if self.link_up:
+                self.upload(t, cmd)
+            else:
+                self.next_upload = t + self.cfg["link"]["upload_retry_s"]
+                if not self.upload_waiting:
+                    self.upload_waiting = True
+                    log.event(t, "upload_wait", note="link down, will retry")
+                    print(f"[rover] t={t:.2f} upload waiting: link down, retrying every "
+                          f"{self.cfg['link']['upload_retry_s']} s", flush=True)
+
+    def upload(self, t, cmd):
+        """Hand the run to the dashboard: flush, write the summary, copy the run folder."""
+        log = self.log
+        self.uploaded, self.t_upload = True, t
+        log.trip = self.trip_info(cmd)
+        log.event(t, "upload", to="dashboard/", images=len(log.images))
+        log.flush()
+        log.write_summary(f"Mine rover run {self.run_name}")
+        dst = os.path.join(log.run_dir, "dashboard")
+        if os.path.isdir(dst):
+            shutil.rmtree(dst)                      # this run's own previous upload
+        shutil.copytree(log.run_dir, dst, ignore=shutil.ignore_patterns("dashboard", "webots.log", "*.mp4", "shots"))
+        print(f"[rover] t={t:.2f} log uploaded to {os.path.relpath(dst, ROOT)}", flush=True)
 
     # ------------------------------------------------------------------
     def sweep(self, t, r, a, cmd):
@@ -280,7 +376,8 @@ class Rover:
 
     def record(self, t, r, a, cmd, impact):
         log = self.log
-        log.row(t, r, a, cmd)
+        log.row(t, r, a, cmd, extra={"batt_v": self.batt.volts, "batt_avg_v": self.batt.avg_v,
+                                     "batt_level": self.batt.level, "link": int(self.link_up)})
         if impact:
             self.impacts += 1
             log.event(t, "impact", g=round(self.att.last_impact_g, 2))
@@ -314,10 +411,11 @@ class Rover:
             def fmt(v):
                 return " -- " if v is None else f"{v:4.2f}"
             gas = "warm-up" if r.gas_ppm is None else f"{r.gas_ppm:4.0f}ppm {a.gas_slope:+5.1f}/s"
-            print(f"[{t:6.1f}s] {cmd.mode}/{cmd.state:<11} {a.level:<7} {a.reason:<12} us L{fmt(r.us_left)} R{fmt(r.us_right)} m"
+            batt = " --.- V" if self.batt.volts is None else f"{self.batt.volts:5.2f} V"
+            print(f"[{t:6.1f}s] {cmd.mode}/{cmd.state:<11} {cmd.direction:<6} {a.level:<7} {a.reason:<12} us L{fmt(r.us_left)} R{fmt(r.us_right)} m"
                   f"  gas {gas}  tilt {r.tilt_deg:4.1f}  yaw {r.yaw_deg:+7.1f}"
                   f"  route {'  --  ' if cmd.route is None else format(cmd.route, '+6.1f')}  cmd {cmd.left:+.2f} {cmd.right:+.2f}"
-                  f"  {cmd.note}", flush=True)
+                  f"  batt {batt} {self.batt.level}  link {'up' if self.link_up else 'down'}  {cmd.note}", flush=True)
         if t >= self.next_summary:
             self.next_summary = t + 10.0
             log.write_summary(f"Mine rover run {self.run_name}")
@@ -342,7 +440,14 @@ class Rover:
                "note": cmd.note, "images": len(self.log.images) if self.log else 0, "sweeps": self.seq.count,
                "sweeping": self.seq.busy, "seen": self.seen_labels, "nav_seen": self.seen_nav,
                "impacts": self.impacts, "req": self.requests,
-               "att_err": {k: round(v, 2) for k, v in self.att_err.items()}}
+               "att_err": {k: round(v, 2) for k, v in self.att_err.items()},
+               "dir": cmd.direction, "ret_reason": cmd.return_reason, "home": cmd.state == HOME,
+               "uploaded": self.uploaded, "link": self.link_up, "batt_level": self.batt.level,
+               "batt_v": None if self.batt.volts is None else round(self.batt.volts, 2),
+               "batt_avg": None if self.batt.avg_v is None else round(self.batt.avg_v, 2),
+               "batt_min_avg": None if self.batt.min_avg_v is None else round(self.batt.min_avg_v, 2),
+               "out_s": round(self.nav.out_s, 1), "ret_s": round(self.nav.ret_s, 1),
+               "route": None if cmd.route is None else round(cmd.route, 1)}
         self.requests = []
         self.emitter.send(json.dumps(msg))
 
@@ -351,7 +456,8 @@ class Rover:
         if self.log is None:
             return
         self.log.event(t, "end", att_err={k: round(v, 2) for k, v in self.att_err.items()},
-                       images=len(self.log.images), sweeps=self.seq.count)
+                       images=len(self.log.images), sweeps=self.seq.count, uploaded=self.uploaded,
+                       battery=self.batt.level)
         self.log.write_summary(f"Mine rover run {self.run_name}")
         self.log.close()
         self.log = None

@@ -1,0 +1,21 @@
+# Mission timer: a long empty corridor with the timer cut from 15 min to 25 s. The rover
+# turns back when it expires, drives out, HOME, upload.
+name: mission_timer
+world: long_corridor
+duration: 200
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+cfg:
+  navigator: {mission_time_s: 25}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
+expect:
+  returns: true
+  return_reason: "mission timer"
+  return_between_s: [25, 31]
+  link_dropped: true
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true
+  max_collisions: 0
+  no_fall: true

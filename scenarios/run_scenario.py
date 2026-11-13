@@ -70,6 +70,8 @@ def run_one(name, combo=(1, 1), gui=False, render=None, video=False, shots=False
                MINE_RENDER="1" if render else "0", MINE_VIDEO="1" if video else "0",
                MINE_SHOTS="1" if shots else "0")
     env.pop("MINE_SEED", None)          # legacy single seed: must not override the two seeds above
+    # per-scenario config overrides (e.g. a low starting charge), read by both controllers
+    env["MINE_CFG"] = json.dumps(sc.get("cfg") or {})
     if gui:
         cmd = [WEBOTS, "--mode=realtime", "--stdout", "--stderr", tmp]
     else:
@@ -86,12 +88,20 @@ def run_one(name, combo=(1, 1), gui=False, render=None, video=False, shots=False
     status = "ok"
     with open(log_path, "w") as log:
         proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env)
-        try:
-            proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
-            status = "timeout"
+        while True:
+            try:
+                proc.wait(timeout=3)
+                break
+            except subprocess.TimeoutExpired:
+                pass
+            if time.time() - t0 > timeout:
+                status = "timeout"
+            elif controller_died(log_path):
+                status = "controller crashed"      # the simulation would otherwise idle until the timeout
+            if status != "ok":
+                proc.kill()
+                proc.wait()
+                break
     wall = time.time() - t0
     for p in (tmp, os.path.join(ROOT, "worlds", f"._run_{run}.wbproj")):
         if os.path.exists(p):
@@ -105,13 +115,23 @@ def run_one(name, combo=(1, 1), gui=False, render=None, video=False, shots=False
         result["metrics"] = m
         result["checks"] = m.get("checks", [])
         result["passed"] = bool(m.get("passed")) and status == "ok"
-        if "passed" not in m:
+        if "passed" not in m and status == "ok":
             result["status"] = "no verdict (simulation ended early?)"
-    else:
+    elif status == "ok":
         result["status"] = "no metrics.json"
     if not quiet:
         print_result(result)
     return result
+
+
+def controller_died(log_path):
+    """True once Webots has reported a controller exiting with an error."""
+    try:
+        with open(log_path, errors="replace") as fh:
+            head = fh.read(20000)
+    except OSError:
+        return False
+    return "controller exited with status" in head or "Traceback (most recent call last)" in head
 
 
 def print_result(r):

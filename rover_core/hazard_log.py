@@ -6,7 +6,8 @@ import os
 
 CSV_FIELDS = ["t", "level", "reason", "nav", "mode", "us_left_m", "us_right_m", "ir_front_left",
               "ir_front_right", "floor_lost_left", "floor_lost_right", "pitch_deg", "roll_deg",
-              "yaw_deg", "gas_ppm", "gas_slope", "left_cmd", "right_cmd", "route_deg"]
+              "yaw_deg", "gas_ppm", "gas_slope", "left_cmd", "right_cmd", "route_deg",
+              "direction", "batt_v", "batt_avg_v", "batt_level", "link"]
 LEVEL_COLOUR = {"SAFE": "#2e9e4f", "CAUTION": "#d98a00", "DANGER": "#d0312d"}
 
 
@@ -29,12 +30,14 @@ class HazardLog:
         self._ev_fh = open(os.path.join(run_dir, "events.jsonl"), "w")
         self.events = []
         self.images = []                 # dicts: file, t, sweep, angle, level, reason
+        self.trip = {}                   # direction, return reason, HOME, upload, battery, link (for the summary)
 
     # ---- rows -------------------------------------------------------
-    def row(self, t, r, a, cmd):
+    def row(self, t, r, a, cmd, extra=None):
         if t + 1e-9 < self._next_row:
             return False
         self._next_row = max(self._next_row + self._period, t - self._period)
+        extra = extra or {}
         self._csv.writerow({
             "t": round(t, 2), "level": a.level, "reason": a.reason, "nav": cmd.state, "mode": cmd.mode,
             "us_left_m": _num(r.us_left), "us_right_m": _num(r.us_right),
@@ -43,7 +46,10 @@ class HazardLog:
             "pitch_deg": _num(r.pitch_deg, 1), "roll_deg": _num(r.roll_deg, 1), "yaw_deg": _num(r.yaw_deg, 1),
             "gas_ppm": _num(r.gas_ppm, 1), "gas_slope": _num(a.gas_slope, 1),
             "left_cmd": _num(cmd.left, 2), "right_cmd": _num(cmd.right, 2),
-            "route_deg": _num(getattr(cmd, "route", None), 1)})
+            "route_deg": _num(getattr(cmd, "route", None), 1),
+            "direction": getattr(cmd, "direction", ""),
+            "batt_v": _num(extra.get("batt_v"), 2), "batt_avg_v": _num(extra.get("batt_avg_v"), 2),
+            "batt_level": extra.get("batt_level", ""), "link": extra.get("link", "")})
         self._csv_fh.flush()
         return True
 
@@ -60,6 +66,15 @@ class HazardLog:
         rec = dict(file=filename, t=round(t, 2), sweep=sweep, angle=angle, level=level, reason=reason, why=why)
         self.images.append(rec)
         self.event(t, "image", **{k: v for k, v in rec.items() if k != "t"})
+
+    def flush(self):
+        """Force everything written so far onto the disk (called at RETURN, HOME and STUCK)."""
+        for fh in (self._csv_fh, self._ev_fh):
+            try:
+                fh.flush()
+                os.fsync(fh.fileno())
+            except (OSError, ValueError):
+                pass
 
     def close(self):
         for fh in (self._csv_fh, self._ev_fh):
@@ -91,6 +106,28 @@ class HazardLog:
                f"<h1>{html.escape(title)}</h1>",
                f"<p>Run folder: <code>{html.escape(os.path.basename(self.run_dir))}</code> &middot; "
                f"{len(hazards)} hazard events &middot; {len(self.images)} sweep images</p>"]
+        trip = self.trip
+        if trip:
+            out.append("<h2>Trip</h2>")
+            if trip.get("batt_level") in ("WARN", "CRITICAL"):
+                out.append(f"<p class='lvl' style='color:{LEVEL_COLOUR['DANGER' if trip['batt_level'] == 'CRITICAL' else 'CAUTION']}'>"
+                           f"Battery {html.escape(trip['batt_level'])}: the 5 s average fell below "
+                           f"{html.escape(str(trip.get('batt_warn_v')))} V at t={html.escape(str(trip.get('batt_t_warn')))} s"
+                           + (f" and below {html.escape(str(trip.get('batt_critical_v')))} V (critical) at "
+                              f"t={html.escape(str(trip.get('batt_t_critical')))} s" if trip.get("batt_t_critical") is not None else "")
+                           + "</p>")
+            out.append("<table>")
+            for k, label in (("direction", "direction"), ("return_reason", "return reason"), ("t_return", "turned back at (s)"),
+                             ("home", "HOME reached"), ("t_home", "HOME at (s)"), ("uploaded", "log uploaded"),
+                             ("t_upload", "uploaded at (s)"), ("out_s", "driving time in (s)"),
+                             ("ret_s", "driving time back (s)"), ("link", "link"), ("batt_level", "battery level (latched)"),
+                             ("batt_v", "battery now (V)"), ("batt_avg_v", "battery 5 s average (V)"),
+                             ("batt_min_avg_v", "lowest 5 s average (V)"), ("batt_t_return", "below return threshold at (s)"),
+                             ("batt_t_warn", "below warn threshold at (s)"),
+                             ("batt_t_critical", "below critical threshold at (s)")):
+                if trip.get(k) is not None:
+                    out.append(f"<tr><th>{label}</th><td>{html.escape(str(trip[k]))}</td></tr>")
+            out.append("</table>")
         if metrics:
             out.append("<h2>Metrics</h2><table>")
             for k, v in metrics.items():

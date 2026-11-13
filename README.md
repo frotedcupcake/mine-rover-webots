@@ -43,13 +43,40 @@ recommended spec; that is expected. Each run writes `reports/<world>_<date>_<tim
 | `D` | drop a roof-fall rock ahead **when not in MANUAL** (`Shift+D` from any mode) |
 | `X` | STOP mode |
 | `Space` | emergency stop (STOP mode) |
-| `R` | resume after HOLD or STUCK (refused while the level is still DANGER) |
+| `R` | resume after HOLD or STUCK (refused while the level is still DANGER); at HOME: start a new trip in |
 | `C` | camera sweep now |
 | `L` | headlamp on/off |
 | `V` | chase camera on/off (off lets you move the view yourself) |
 
 Manual forward is refused over a drop or within 15 cm of an obstacle. Keys held on the
 keyboard time out after 0.4 s (dead-man).
+
+**Rover commands need the dashboard link.** `M`, the drive keys, `A`, `X`, `Space`, `R`, `C`
+and `L` only reach the rover while the link is up, which is within 3 m of the entrance (the
+second line of the on-screen label shows `link UP` / `link down`). `D` and `V` are simulation
+controls and always work. Nothing depends on an operator: see RETURN below.
+
+## Trip: in, RETURN, HOME
+
+No operator is assumed underground. The rover drives in until something tells it to turn back,
+then drives out on the reverse of its route heading with the same avoidance, floor reflex and
+Danger rules, and is HOME when the link comes back (or after 1.2 x its outward driving time).
+At HOME it flushes the log and uploads the run folder to `reports/<run>/dashboard/`; if the
+link is down it retries every 2 s.
+
+| Turns back (RETURN) when | Note in the log |
+|---|---|
+| nothing open in the +-100 degree sector after the 8 s AVOID | `blocked ahead` |
+| both floor IRs lose the floor | `full-width pit` |
+| pitch tilt over 20 degrees | `slope too steep` |
+| 3 pits within 2 minutes | `3 pits in 2 minutes` |
+| battery: 5 s average below 10.5 V (latched) | `battery reserve` |
+| 15 minutes after the trip started | `mission timer` |
+| DANGER: stop, sweep, log, hold 30 s | `danger hold finished` |
+
+Blocked again on the way back: STUCK "blocked both ways", with the full log flushed first.
+Battery 5 s average below 9.6 V: STUCK "battery critical" (latched, log flushed). Below 10.2 V
+is a warning only (label, status line, `summary.html`).
 
 ## Tests and scenarios
 
@@ -64,13 +91,20 @@ tools/make_demo.sh                                            # screenshots + vi
 | Scenario | World | What must happen |
 |---|---|---|
 | `obstacles` | obstacles | reaches the far end, 0 collisions |
-| `pit_ahead` | pit_ahead | CAUTION FLOOR_LOST, never falls, ends STUCK "route blocked" |
+| `pit_ahead` | pit_ahead | CAUTION FLOOR_LOST, never falls, RETURN (pit), HOME, upload |
 | `side_pit` | side_pit | gets past the half-width pit, never falls |
-| `ramp` | ramp | CAUTION TILT and a back-off |
-| `gas_ahead` | gas_ahead | DANGER GAS_BUILDUP, then HOLD, at least 5 sweep images |
-| `roof_fall` | corridor | rocks dropped at t = 7 s give DANGER ROOF_FALL, then HOLD |
-| `mine` | mine | no collision, no fall, reaches the gas, DANGER, HOLD |
+| `ramp` | ramp | too-steep ramp (25 deg): CAUTION TILT, back-off, RETURN (slope too steep), HOME |
+| `ramp_gentle` | ramp_gentle | climbable 10 deg hump: drives over it and carries on, no TILT, no RETURN |
+| `gas_ahead` | gas_ahead | DANGER GAS_BUILDUP, 5 sweep images, hold 30 s within 2.5 m, RETURN, HOME, upload |
+| `roof_fall` | corridor | rocks dropped at t = 7 s give DANGER ROOF_FALL, hold 30 s, RETURN, HOME |
+| `mine` | mine | no collision, no fall, reaches the gas, DANGER, hold 30 s, RETURN, link back, HOME, upload |
 | `gas_dropout` (addition) | corridor | gas radio silent for 3 s gives CAUTION STALE_DATA and a stop, then the rover carries on |
+| `blocked_ahead` | corridor | dead end: RETURN (blocked ahead), HOME, upload |
+| `blocked_both` | corridor | dead end, then a barrier dropped behind: STUCK "blocked both ways", log flushed first |
+| `battery_reserve` | mine | low starting charge: RETURN (battery reserve), HOME, upload |
+| `mission_timer` | long_corridor | timer cut to 25 s: RETURN (mission timer), HOME, upload |
+| `danger_return` | gas_return | long tunnel: DANGER, hold, RETURN, link back, HOME, upload |
+| `gas_return` | gas_return | as above, plus a second gas pocket on the way back: second hold, then it keeps returning |
 
 Each run has two seeds. The noise seed sets the Webots sensor noise, the IMU/gas noise and the
 motor mismatch; the shift seed sets the start-pose shift (0 = none) and where dropped rocks land.
@@ -134,7 +168,9 @@ camera resolution), so the model can follow the real build without editing the p
 | IMU (MPU6050) | Ideal Webots accelerometer and gyro at 5 ms, plus white noise and a constant gyro bias added in the controller | No temperature drift, no vibration from real motors |
 | Gas sensor | The supervisor computes `peak(t) * exp(-d^2 / 2 sigma^2)` at the rover and radios it. The rover adds noise, a 1 s lag and a 2 s warm-up | Not a gas simulation: no airflow, no diffusion, no cross-sensitivity. The green sphere is only a marker |
 | Roof fall | The supervisor spawns three rocks about 0.4 m ahead and shoves the chassis for 30 ms | The shove stands in for debris striking the rover |
-| Motors | Velocity-controlled wheels, 0.15 N.m limit, dead zone below 35 % command, +-3 % left/right mismatch | No battery sag, no gearbox backlash |
+| Motors | Velocity-controlled wheels, 0.15 N.m limit, dead zone below 35 % command, +-3 % left/right mismatch | No gearbox backlash; the battery does not slow the motors |
+| Battery | `rover_core/battery.py`: a simulated 3S 4000 mAh pack (open-circuit voltage from the charge left, minus current x 0.15 ohm) outputs what the Uno would send, `batt_x10` = ADC counts x 10. The rover converts it to volts and judges a 5 s average | Draw (2 A driving, 0.6 A idle), internal resistance and the voltage curve are placeholders until measured on the real pack. The navigator never sees charge or current |
+| Dashboard link | The supervisor stands in for the laptop at the entrance: link up within 3 m (drops 0.3 m further out), sent as a heartbeat in the 20 Hz radio message; no message for 0.5 s = link down | Real radio range depends on the tunnel; 3 m is a stand-in |
 | Camera | Webots camera 640x480, 60 degree FOV, on a +-120 degree pan at 60 deg/s | No motion blur, no dust, no lens distortion |
 | `inertial_unit` | Ground truth, used only to report the attitude filter's error in `metrics.json` | Never used by the autonomy |
 

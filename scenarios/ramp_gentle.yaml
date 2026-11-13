@@ -1,0 +1,17 @@
+# Climbable ramp: a 10 degree hump, under the 20 degree tilt limit. The rover drives over it
+# and carries on down the tunnel; it must not report TILT and must not turn back.
+name: ramp_gentle
+world: ramp_gentle
+duration: 120
+render: false
+start_jitter: {x: 0.05, y: 0.06, yaw_deg: 3}
+regions:
+  on_top: {x_min: 3.5, x_max: 4.1}
+  past_ramp: {x_min: 6.2}
+end_when: {reach: past_ramp, settle_s: 0.5}
+expect:
+  reach: [on_top, past_ramp]
+  not_seen: ["CAUTION TILT"]
+  returns: false
+  max_collisions: 0
+  no_fall: true

@@ -1,11 +1,18 @@
-# 25 degree ramp: tilt goes over 20 degrees -> CAUTION TILT and a back-off.
+# Too-steep ramp (25 degrees): tilt goes over 20 degrees -> CAUTION TILT, back off until
+# level, then RETURN (slope too steep) and HOME.
 name: ramp
 world: ramp
-duration: 90
+duration: 180
 render: false
 start_jitter: {x: 0.05, y: 0.06, yaw_deg: 3}
-end_when: {seen: ["CAUTION TILT"], nav: [CRUISE, AVOID, STUCK], settle_s: 3.0}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
 expect:
   seen: ["CAUTION TILT"]
   nav_seen: [BACKOFF]
   no_fall: true
+  returns: true
+  return_reason: "slope too steep"
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true

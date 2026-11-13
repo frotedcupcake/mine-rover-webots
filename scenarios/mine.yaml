@@ -1,18 +1,28 @@
 # Full mine run: rubble, half-width pit, 90 degree bend, more rubble, then the gas source.
+# DANGER at the gas: sweep, hold 30 s, then RETURN the way it came, HOME when the link is
+# back, log uploaded.  Stopping before the gas (e.g. at the third rubble pile) is a FAIL.
 name: mine
 world: mine
-duration: 300
+duration: 480
 render: false
 start_jitter: {x: 0.04, y: 0.06, yaw_deg: 4}
 overview: {position: [4.6, 2.3, 23], orientation: [0, 1, 0, 1.5708]}   # used with --shots
 regions:
   past_pit: {x_min: 7.0}
   tunnel_b: {y_min: 1.0, x_min: 7.9}
-end_when: {seen: ["DANGER GAS_BUILDUP"], nav: HOLD, settle_s: 3.0, fell: true}
+end_when: {uploaded: true, settle_s: 2.0, fell: true, or_nav: [STUCK]}
 expect:
   max_collisions: 0
   no_fall: true
   reach: [past_pit, tunnel_b]
   seen: ["DANGER GAS_BUILDUP"]
-  final_nav: HOLD
   max_gas_distance_m: 2.5
+  holds: 1
+  hold_min_s: 30
+  returns: true
+  return_reason: "danger hold finished"
+  link_dropped: true
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true

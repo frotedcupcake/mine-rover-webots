@@ -3,8 +3,8 @@ import pytest
 from conftest import DT, mk
 
 from rover_core.fusion import HazardFusion
-from rover_core.navigator import (AUTO, AVOID, BACKOFF, CRUISE, HOLD, MANUAL, STOP, STUCK, SWEEP,
-                                  MotorGuard, Navigator, snap, wrap180)
+from rover_core.navigator import (AUTO, AVOID, BACKOFF, CRUISE, DIR_IN, DIR_RETURN, HOLD, HOME, MANUAL, STOP,
+                                  STUCK, SWEEP, MotorGuard, Navigator, snap, wrap180)
 
 
 class Rig:
@@ -137,7 +137,7 @@ def spin_sim(rig, make_kw, secs, rate=4.0):
         if c is not None and c.state == AVOID and c.left != c.right:
             yaw["v"] += rate * (1 if c.right > c.left else -1)
         rig.step(**make_kw(yaw["v"]))
-        trace.append((rig.cmd.state, yaw["v"]))
+        trace.append((rig.cmd.state, yaw["v"], rig.cmd.direction))
     return trace
 
 
@@ -150,8 +150,12 @@ def test_avoid_never_leaves_facing_more_than_100_deg_off_the_route(rig):
         open_ = abs(wrap180(yaw)) > 110
         return dict(us_left=1.5 if open_ else 0.25, us_right=1.5 if open_ else 0.25, yaw_deg=yaw)
     trace = spin_sim(rig, kw, 9.0)
-    assert all(abs(wrap180(y)) <= 100 + 8 for st, y in trace if st == AVOID)   # one step of overshoot
-    assert rig.cmd.state == STUCK                     # blocked ahead: nothing in the sector
+    spun_in = [y for st, y, d in trace if st == AVOID and d == DIR_IN]
+    assert len(spun_in) * DT >= 7.5                   # the whole 8 s timeout (0.3 s of it before this trace)
+    assert all(abs(wrap180(y)) <= 100 + 8 for y in spun_in)   # one step of overshoot
+    # blocked ahead, nothing in the sector: the rover turns back (it used to stop as STUCK)
+    assert rig.cmd.direction == DIR_RETURN and rig.cmd.return_reason == "blocked ahead"
+    assert STUCK not in [st for st, _y, _d in trace]
 
 
 def test_back_to_back_avoids_keep_the_original_route(rig):
@@ -190,7 +194,7 @@ def test_avoid_needs_real_room_ahead_not_just_50cm(rig):
     assert rig.cmd.state == AVOID
 
 
-def test_avoid_reverses_direction_then_times_out_stuck(rig):
+def test_avoid_tries_both_ways_then_returns_and_blocked_again_is_stuck(rig):
     rig.run(0.5)
     yaw = {"v": 0.0}
 
@@ -199,12 +203,16 @@ def test_avoid_reverses_direction_then_times_out_stuck(rig):
             yaw["v"] += 4.0 * (1 if rig.cmd.right > rig.cmd.left else -1)   # 80 deg/s
         return dict(us_left=0.25, us_right=0.2, yaw_deg=yaw["v"])
     dirs = []
-    for _ in range(int(9 / DT)):
+    for _ in range(int(8.4 / DT)):
         rig.step(**make(rig.t))
-        if rig.cmd.state == AVOID:
+        if rig.cmd.state == AVOID and rig.cmd.direction == DIR_IN:
             dirs.append(1 if rig.cmd.right > rig.cmd.left else -1)
     assert 1 in dirs and -1 in dirs                   # tried both ways
-    assert rig.cmd.state == STUCK
+    assert rig.cmd.direction == DIR_RETURN and rig.cmd.return_reason == "blocked ahead"
+    assert rig.cmd.state == AVOID                     # turning round, not stuck
+    for _ in range(int(8.4 / DT)):                    # walled in on every side: no way back either
+        rig.step(**make(rig.t))
+    assert rig.cmd.state == STUCK and "blocked both ways" in rig.cmd.note
     assert (rig.cmd.left, rig.cmd.right) == (0.0, 0.0)
 
 
@@ -249,9 +257,11 @@ def test_pit_on_left_backs_off_sweeps_reverses_turns_right(rig):
     assert rig.nav._bias_side == "left"
 
 
-def test_pit_on_both_sides_turns_160(rig):
+def test_pit_on_both_sides_turns_round_onto_the_return_heading(rig):
     seen = run_backoff(rig, dict(floor_lost_left=True, floor_lost_right=True, floor_raw_left=True, floor_raw_right=True))
-    assert 150 < abs(seen[-1][3]) < 175
+    assert 155 < abs(seen[-1][3]) <= 185
+    assert rig.cmd.direction == DIR_RETURN and rig.cmd.return_reason == "full-width pit"
+    assert rig.cmd.state == HOME                      # this rig's link is always up: home once turned round
 
 
 def test_bias_keeps_rover_away_from_the_pit_side(rig):
@@ -268,24 +278,6 @@ def test_never_forward_while_floor_lost_in_any_state(rig):
     for _ in range(int(6 / DT)):
         c = rig.step(floor_lost_left=True, floor_raw_left=True)
         assert c.left <= 0 and c.right <= 0
-
-
-def test_three_pits_in_two_minutes_is_stuck_route_blocked(rig):
-    for i in range(3):
-        rig.run(0.3, floor_lost_left=True, floor_lost_right=True, floor_raw_left=True, floor_raw_right=True)
-        if i < 2:
-            assert rig.cmd.state in (BACKOFF, SWEEP)
-            yaw = 0.0
-            for _ in range(int(12 / DT)):
-                if rig.cmd.left * rig.cmd.right < 0:
-                    yaw += 6.0
-                rig.step(yaw_deg=yaw)
-            assert rig.cmd.state == CRUISE
-    assert rig.t < 120
-    rig.run(1.5)                                      # (a sweep of the third pit may run first)
-    assert rig.cmd.state == STUCK
-    assert "route blocked" in rig.cmd.note
-    assert (rig.cmd.left, rig.cmd.right) == (0.0, 0.0)
 
 
 def test_tilt_backs_off_until_level(rig):

@@ -1,0 +1,23 @@
+# Blocked both ways: dead end ahead, and once the rover is at the far end a full-width rock
+# fall comes down behind it. It turns back, meets the barrier, and must stop as
+# STUCK "blocked both ways" with the full log flushed to disk first.
+name: blocked_both
+world: corridor
+duration: 180
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+regions:
+  far_end: {x_min: 5.0}
+events:
+  - {when: "reach:far_end", do: barrier, at: [4.3, 0.0]}
+end_when: {nav: STUCK, settle_s: 2.0}
+expect:
+  reach: [far_end]
+  returns: true
+  return_reason: "blocked ahead"
+  final_nav: STUCK
+  final_note_contains: "blocked both ways"
+  flushed_on: STUCK
+  link_at_end: false
+  max_collisions: 0
+  no_fall: true

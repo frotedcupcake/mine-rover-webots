@@ -432,6 +432,36 @@ def ramp():
     w.write()
 
 
+def ramp_gentle():
+    """A 10 degree hump (up, level, down): under the 20 degree tilt limit, so the rover
+    drives over it and carries on."""
+    w = World("ramp_gentle", "10 degree hump")
+    w.tunnel_x(0, 8)
+    a, length, top = 10.0, 1.0, 0.8
+    run = length * math.cos(math.radians(a))
+    rise = length * math.sin(math.radians(a))
+    x0 = 2.4
+    w.ramp(x0, 0.0, 0.0, length=length, width=1.19, angle_deg=a)
+    w.box(x0 + run + top / 2, 0, rise - 0.03, top, 1.19, 0.06, "floor", "hump top", tscale=(top, 1.19))
+    w.ramp(x0 + 2 * run + top, 0.0, math.pi, length=length, width=1.19, angle_deg=a)
+    w.write()
+
+
+def gas_return():
+    """12 m tunnel with the gas source near the far end: far enough in for the link to drop,
+    and room for a second gas pocket (added by the supervisor) on the way back."""
+    w = World("gas_return", "Gas ahead, long tunnel")
+    w.tunnel_x(0, 12)
+    w.gas_source(10.0, 0.0, peak=2500, sigma=1.0, ramp_up=5.0, trigger=3.5)
+    w.write()
+
+
+def long_corridor():
+    w = World("long_corridor", "Long test corridor")
+    w.tunnel_x(0, 12)
+    w.write()
+
+
 def mine():
     """Main demo: 8.6 m tunnel A (+X), 90 deg left bend, 7 m tunnel B (+Y)."""
     w = World("mine", "Underground mine")
@@ -482,5 +512,5 @@ def mine():
 
 
 if __name__ == "__main__":
-    for fn in (corridor, obstacles, pit_ahead, side_pit, gas_ahead, ramp, mine):
+    for fn in (corridor, obstacles, pit_ahead, side_pit, gas_ahead, ramp, ramp_gentle, gas_return, long_corridor, mine):
         fn()

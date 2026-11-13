@@ -14,7 +14,15 @@ def load(path=None, overrides=None):
         cfg = yaml.safe_load(fh)
     if overrides:
         cfg = merge(cfg, overrides)
+    validate(cfg)
     return cfg
+
+
+def validate(cfg):
+    """Refuse a config whose values contradict each other."""
+    if "battery" in cfg:
+        from .battery import check_config
+        check_config(cfg["battery"])
 
 
 def merge(base, extra):

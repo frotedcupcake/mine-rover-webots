@@ -135,3 +135,52 @@ Each entry: what was decided, and why. Items that go beyond the brief are marked
 - **The rover camera overlay is hidden for video/screenshot runs** by writing a small
   `.wbproj` next to the temporary world.
 - **The overview screenshot adds a temporary light and clears the fog** for that one frame.
+
+## RETURN mode (commit 2, 2026-11-13)
+The design is the user's (HANDOFF.md section 5). These are the choices made while building it;
+each was reported at checkpoint 1.
+- **The turn-round is the normal AVOID with one extra rule.** On RETURN the route heading is
+  turned by 180 degrees and an AVOID starts. Until the rover is within `return_turn_tol_deg`
+  (20) of the new route, clear readings are ignored; from there the usual sector and
+  stop-and-confirm exit apply. Without that rule the rover would leave the spin at the first
+  clear reading inside the sector, which in open ground is 100 degrees off the way home.
+- **A manoeuvre that interrupts the turn-round resumes it.** A sweep, a Danger hold or a
+  back-off that ends while the rover still faces more than 100 degrees off the route goes back
+  to turning, not to CRUISE (which would drive it further in).
+- **Blocked-ahead back-offs reverse first, then turn back.** Full-width pit, slope too steep and
+  the third pit all do the normal sweep and reverse (0.7 s, or until level) before RETURN, so
+  the rover never spins with its nose over an edge. The old 160 degree turn
+  (`backoff_turn_both_deg`) is gone; the turn-round replaces it.
+- **Only pitch tilt counts as "slope too steep".** Roll tilt (one side riding up on something)
+  still turns 60 degrees away and carries on, as before.
+- **"3 pits in 2 minutes" is counted per leg.** The count restarts on RETURN, otherwise the
+  half-width pit in the mine (met on the way in and again on the way back) could add up to a
+  false "blocked both ways".
+- **HOME needs the turn-round to be finished.** If the link never dropped (blocked within 3 m of
+  the entrance, as in `pit_ahead` and `ramp`), the rover still turns to face out and only then
+  is HOME. HOME is checked in CRUISE only.
+- **Driving time = time in CRUISE, AVOID or BACKOFF.** Sweeps, holds and CALIBRATING are not
+  counted. HOME by time needs return time >= 1.2 x outward time.
+- **Danger hold timer starts after the sweep** and is not restarted by later sweeps in the same
+  hold. `R` (link up, level no longer DANGER) still resumes early.
+- **Danger re-arm.** A Danger finding the rover has held for is ignored until it clears: gas
+  build-up until the reading is below `gas_danger_ppm`, extreme gas until below
+  `gas_extreme_ppm`, roof fall until its latch expires. Fusion still reports DANGER; only the
+  stop is suppressed. Sweeps still run.
+- **Battery.** `rover_core/battery.py`. The navigator gets a `BatteryStatus` whose level comes
+  from the 5 s average voltage alone and latches (OK -> RETURN -> WARN -> CRITICAL). Nothing is
+  judged until 5 s of data exist. CRITICAL zeroes the motors in every mode; in AUTO the state
+  becomes STUCK "battery critical" (HOME stays HOME). `R` is refused while critical, and a new
+  trip from HOME is refused once the return level has latched. Config load fails unless
+  return_v > warn_v > critical_v.
+- **Link.** Up at <= 3.0 m from the entrance, down beyond 3.3 m (`link_hyst_m`). The entrance is
+  the rover's nominal start position (before any start shift). With the link down every key
+  except `D` and `V` is ignored, including Space.
+- **Upload = flush, write summary.html, copy the run folder to `reports/<run>/dashboard/`.**
+  Without the link it retries every `upload_retry_s` (2 s).
+- **Scenario files may override config** (`cfg:`), passed to both controllers as `MINE_CFG`;
+  used for the low starting charge and the shortened mission timer.
+- **Scenario event triggers use `when:`** (`return`, `home`, `hold`, `reach:<region>`), not
+  `on:`, because YAML reads a bare `on` as `true`.
+- **`max_gas_distance_m` is now measured where the rover held**, not at its final position
+  (which is HOME). `home_max_entrance_m` is 3.35 = link range + hysteresis.

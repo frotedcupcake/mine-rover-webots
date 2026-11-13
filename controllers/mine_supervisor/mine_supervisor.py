@@ -24,7 +24,8 @@ if ROOT not in sys.path:
 import yaml  # noqa: E402
 from controller import Supervisor  # noqa: E402
 
-from rover_core.gas_model import GasField  # noqa: E402
+from rover_core import config as rover_config  # noqa: E402
+from rover_core.gas_model import GasField, GasSource  # noqa: E402
 
 LABEL_COLOUR = {"SAFE": 0x35D060, "CAUTION": 0xFFB000, "DANGER": 0xFF3020}
 ROCK = """Solid {{
@@ -48,6 +49,25 @@ ROCK = """Solid {{
     damping Damping {{ linear 0.6 angular 0.9 }}
   }}
 }}"""
+
+
+def barrier_node(x, y, yaw, width, n):
+    """A full-width fall of rock across the tunnel: a slab faced with rock columns (the columns
+    give the sonar something to see at any angle, like the ribbed walls)."""
+    shapes, bounds = [], []
+    tex = ('appearance PBRAppearance { baseColorMap ImageTexture { url [ "../protos/textures/rubble.jpg" ] } '
+           'roughness 1 metalness 0 }')
+    shapes.append(f"Shape {{ {tex} geometry Box {{ size 0.16 {width:.3f} 0.6 }} }}")
+    bounds.append(f"Box {{ size 0.16 {width:.3f} 0.6 }}")
+    k = int(width / 0.11)
+    for i in range(k + 1):
+        py = -width / 2 + 0.03 + i * (width - 0.06) / k
+        for px in (-0.08, 0.08):
+            pose = f"translation {px:.3f} {py:.3f} 0"
+            shapes.append(f"Pose {{ {pose} children [ Shape {{ {tex} geometry Cylinder {{ radius 0.05 height 0.6 subdivision 8 }} }} ] }}")
+            bounds.append(f"Pose {{ {pose} children [ Cylinder {{ radius 0.05 height 0.6 }} ] }}")
+    return (f'Solid {{ translation {x:.3f} {y:.3f} 0.3 rotation 0 0 1 {yaw:.4f} children [ {" ".join(shapes)} ] '
+            f'name "barrier {n}" model "barrier" boundingObject Group {{ children [ {" ".join(bounds)} ] }} locked TRUE }}')
 
 
 def env_flag(name, default=False):
@@ -76,6 +96,8 @@ class MineSupervisor:
         self.run_dir = os.path.join(ROOT, "reports", self.run_name)
         os.makedirs(self.run_dir, exist_ok=True)
         self.gas = GasField.from_yaml(os.path.join(ROOT, "config", "gas_sources", f"{self.world}.yaml"))
+        # same config (and the same scenario overrides) as the rover
+        self.cfg = rover_config.load(overrides=json.loads(os.environ.get("MINE_CFG", "{}") or "{}"))
 
         self.rover = sup.getFromDef("ROVER")
         self.view = sup.getFromDef("VIEW")
@@ -111,8 +133,28 @@ class MineSupervisor:
         self.kicks = []
         self.gas_mute_until = -1e9
         self.pending_cmd = []
-        self.events = sorted((self.scenario or {}).get("events", []) or [], key=lambda e: e["t"])
+        evs = (self.scenario or {}).get("events", []) or []
+        # timed events have `t`; triggered ones have `when: return | home | hold | reach:<region>`
+        # (not `on:` - YAML reads a bare `on` as the boolean True)
+        self.events = sorted((e for e in evs if "when" not in e), key=lambda e: e["t"])
+        self.triggered = [dict(e) for e in evs if "when" in e]
         self.ev_i = 0
+        # dashboard link: the laptop sits at the entrance, where the rover is put down (the
+        # nominal start position, before any start shift)
+        tr = self.rover.getField("translation").getSFVec3f()
+        self.entrance = list((self.scenario or {}).get("entrance") or tr[:2])
+        self.link = True
+        self.link_force = None            # scenario event: True / False / None (= by distance)
+        self.link_flicker = None          # (until_t, period_s)
+        self.link_changes = 0
+        self.batt_charge = None           # pending test hook for the rover's simulated pack
+        self.barriers = 0
+        # trip tracking (from the rover's telemetry)
+        self.t_return = self.return_pos = self.return_reason = None
+        self.t_home = self.home_pos = None
+        self.t_upload = None
+        self.hold = None                  # open Danger hold episode
+        self.holds = []                   # closed episodes: t0, s, gas_m, pos, reason
         self.end_since = None
         self.max_gas = 0.0
         self.min_gas_dist = float("inf")
@@ -174,6 +216,71 @@ class MineSupervisor:
             self.pending_cmd.append(ev.get("cmd"))
         elif what == "screenshot":
             self.shot_queue.append((t, ev.get("name", "shot")))
+        elif what == "barrier":
+            # full-width rock fall across the tunnel at a fixed place (e.g. behind the rover)
+            x, y = ev["at"]
+            self.barriers += 1
+            self.sup.getRoot().getField("children").importMFNodeFromString(-1, barrier_node(
+                x, y, math.radians(ev.get("yaw_deg", 0.0)), float(ev.get("width", 1.2)), self.barriers))
+            self.timeline.append((round(t, 2), "EVENT", "barrier"))
+            print(f"[sup] t={t:.2f} barrier dropped across the tunnel at ({x}, {y})", flush=True)
+        elif what == "gas_source":
+            # a gas pocket that was not there on the way in
+            x, y = ev["at"]
+            src = GasSource(position=[x, y, 0.1], peak_ppm=float(ev.get("peak", 2500)), sigma_m=float(ev.get("sigma", 1.0)),
+                            ramp_up_s=float(ev.get("ramp_up", 5.0)), trigger_distance_m=float(ev.get("trigger", 2.5)),
+                            name=f"gas{len(self.gas.sources) + 1}")
+            self.gas.sources.append(src)
+            self.sup.getRoot().getField("children").importMFNodeFromString(
+                -1, f'GasMarker {{ translation {x} {y} 0.35 name "gas marker event {len(self.gas.sources)}" radius {0.55 * src.sigma_m:.3f} }}')
+            self.timeline.append((round(t, 2), "EVENT", "gas_source"))
+            print(f"[sup] t={t:.2f} new gas pocket at ({x}, {y})", flush=True)
+        elif what == "battery":
+            self.batt_charge = float(ev["charge"])
+            self.timeline.append((round(t, 2), "EVENT", f"battery charge -> {self.batt_charge}"))
+            print(f"[sup] t={t:.2f} simulated battery charge set to {self.batt_charge}", flush=True)
+        elif what == "link":
+            st = ev.get("state", "auto")
+            if st == "flicker":
+                self.link_flicker = (t + float(ev.get("seconds", 5.0)), float(ev.get("period", 0.4)))
+            else:
+                self.link_force = {"up": True, "down": False}.get(st)
+            print(f"[sup] t={t:.2f} link forced {st}", flush=True)
+
+    def fire_triggered(self, t):
+        """Events with `when:` fire once, `delay` seconds after their condition first holds."""
+        for ev in self.triggered:
+            if ev.get("_done"):
+                continue
+            if "_due" not in ev:
+                on = str(ev["when"])
+                hit = ((on == "return" and self.tel.get("dir") == "RETURN") or (on == "home" and self.tel.get("home"))
+                       or (on == "hold" and self.tel.get("nav") == "HOLD")
+                       or (on.startswith("reach:") and on[6:] in self.reached))
+                if hit:
+                    ev["_due"] = t + float(ev.get("delay", 0.0))
+            if "_due" in ev and t >= ev["_due"]:
+                ev["_done"] = True
+                self.do_event(t, ev)
+
+    def update_link(self, t, p):
+        """Link up within link_range_m of the entrance, down link_hyst_m further out."""
+        was = self.link
+        if self.link_flicker and t < self.link_flicker[0]:
+            self.link = int(t / self.link_flicker[1]) % 2 == 0
+        elif self.link_force is not None:
+            self.link = self.link_force
+        else:
+            d = math.dist(p[:2], self.entrance)
+            lk = self.cfg["link"]
+            if self.link and d > lk["link_range_m"] + lk["link_hyst_m"]:
+                self.link = False
+            elif not self.link and d <= lk["link_range_m"]:
+                self.link = True
+        if self.link != was:
+            self.link_changes += 1
+            self.timeline.append((round(t, 2), "LINK", "up" if self.link else "down"))
+        return self.link
 
     # ------------------------------------------------------------------
     def update_metrics(self, t):
@@ -241,14 +348,63 @@ class MineSupervisor:
                     self.roof_fall(t)
                 elif req == "toggle_cam":
                     self.chase = not self.chase
+            self.track_trip(msg)
+
+    def track_trip(self, msg):
+        """Direction, HOME, upload and Danger holds, timed on the rover's own clock."""
+        tr = msg.get("t", 0.0)
+        pos = [round(v, 2) for v in (self.prev_pos or [0, 0, 0])[:2]]
+        if msg.get("dir") == "RETURN" and self.t_return is None:
+            self.t_return, self.return_pos, self.return_reason = tr, pos, msg.get("ret_reason")
+            self.timeline.append((round(tr, 2), "RETURN", msg.get("ret_reason")))
+            print(f"[sup] t={tr:.2f} rover turned back at {pos}: {msg.get('ret_reason')}", flush=True)
+        if msg.get("dir") == "IN" and self.t_return is not None and self.t_home is not None:
+            self.t_return = self.t_home = self.t_upload = None          # a new trip in (R at HOME)
+        if msg.get("home") and self.t_home is None:
+            self.t_home, self.home_pos = tr, pos
+            self.timeline.append((round(tr, 2), "HOME", msg.get("note")))
+            print(f"[sup] t={tr:.2f} rover HOME at {pos}, {math.dist(pos, self.entrance):.2f} m from the entrance", flush=True)
+        if msg.get("uploaded") and self.t_upload is None:
+            self.t_upload = tr
+            self.timeline.append((round(tr, 2), "UPLOAD", "dashboard"))
+        nav = msg.get("nav")
+        if self.hold is None and nav == "HOLD":
+            why = (msg.get("note") or "").replace("holding: ", "").split(" (")[0] or msg.get("reason")
+            self.hold = {"t0": tr, "pos": pos, "reason": why, "dir": msg.get("dir"),
+                         "gas_m": None if not self.gas.sources else round(self.gas.nearest_distance(self.prev_pos or [0, 0, 0]), 2)}
+        elif self.hold is not None and nav not in ("HOLD", "SWEEP"):
+            self.hold["s"] = round(tr - self.hold["t0"], 2)
+            self.hold["then"] = nav
+            self.holds.append(self.hold)
+            self.hold = None
+
+    def all_holds(self):
+        """Closed hold episodes plus one still open at the end (marked)."""
+        out = list(self.holds)
+        if self.hold is not None:
+            out.append(dict(self.hold, s=round(self.tel.get("t", 0.0) - self.hold["t0"], 2), then="(still holding)"))
+        return out
 
     def update_label(self):
         level, reason = self.tel.get("level", "SAFE"), self.tel.get("reason", "")
         nav = f"{self.tel.get('mode', '')}/{self.tel.get('nav', '')}"
         text = f"{level}  {reason}   [{nav}]" if self.tel else "waiting for rover..."
-        if text != self.label_prev:
+        # second line = what the dashboard shows about the trip: direction, battery, link
+        tel = self.tel
+        lvl = tel.get("batt_level", "OK")
+        v = tel.get("batt_avg") if tel.get("batt_avg") is not None else tel.get("batt_v")
+        trip = tel.get("dir", "")
+        if tel.get("home"):
+            trip = "HOME" + (" - log uploaded" if tel.get("uploaded") else " - upload waiting for link")
+        elif tel.get("ret_reason"):
+            trip = f"RETURN ({tel['ret_reason']})"
+        batt = "battery --" if v is None else f"battery {v:.1f} V" + ("" if lvl in ("OK", "RETURN") else f" {lvl}!")
+        line2 = f"{trip}   {batt}{' (return level)' if lvl == 'RETURN' else ''}   link {'UP' if tel.get('link') else 'down'}" if tel else ""
+        if (text, line2) != self.label_prev:
             self.sup.setLabel(0, text, 0.02, 0.9, 0.1, LABEL_COLOUR.get(level, 0xFFFFFF), 0.0, "Arial")
-            self.label_prev = text
+            colour = {"WARN": LABEL_COLOUR["CAUTION"], "CRITICAL": LABEL_COLOUR["DANGER"]}.get(lvl, 0xE8E2D8)
+            self.sup.setLabel(1, line2, 0.02, 0.85, 0.07, colour, 0.0, "Arial")
+            self.label_prev = (text, line2)
 
     def update_camera(self, p, yaw):
         if not self.chase or self.view is None:
@@ -338,6 +494,12 @@ class MineSupervisor:
             ok = ok and ew["reach"] in self.reached
         if "seen" in ew:
             ok = ok and all(s in (self.tel.get("seen") or []) for s in ew["seen"])
+        if ew.get("uploaded"):
+            ok = ok and bool(self.tel.get("uploaded"))
+        if ew.get("home"):
+            ok = ok and bool(self.tel.get("home"))
+        if ew.get("or_nav"):              # e.g. give up early once the rover is STUCK
+            ok = ok or self.tel.get("nav") in ew["or_nav"]
         if ew.get("fell"):
             ok = ok or self.fell
         if ok:
@@ -377,10 +539,57 @@ class MineSupervisor:
                 tel.get("note"))
         if "min_images" in ex:
             add(f"at least {ex['min_images']} sweep images", tel.get("images", 0) >= ex["min_images"], f"{tel.get('images', 0)} images")
+        holds = self.all_holds()
         if "max_gas_distance_m" in ex:
-            p = self.prev_pos or [0, 0, 0]
-            d = self.gas.nearest_distance(p)
-            add(f"stops within {ex['max_gas_distance_m']} m of the gas source", d <= ex["max_gas_distance_m"], f"{d:.2f} m")
+            # where the rover stopped and held for the gas (it drives home afterwards)
+            d = holds[0]["gas_m"] if holds and holds[0]["gas_m"] is not None else float("inf")
+            add(f"stops within {ex['max_gas_distance_m']} m of the gas source", d <= ex["max_gas_distance_m"],
+                f"held {d:.2f} m from it" if holds else "never held")
+        if "holds" in ex:
+            add(f"{ex['holds']} Danger hold(s)", len(holds) == ex["holds"],
+                "; ".join(f"t={h['t0']} {h['reason']} {h['s']} s ({h['dir']})" for h in holds) or "none")
+        if "hold_min_s" in ex:
+            add(f"every Danger hold lasts >= {ex['hold_min_s']} s", bool(holds) and all(h["s"] >= ex["hold_min_s"] - 1e-3 for h in holds),
+                ", ".join(f"{h['s']} s then {h['then']}" for h in holds) or "no hold")
+        if "returns" in ex:
+            want = bool(ex["returns"])
+            add("turns back (RETURN)" if want else "does not turn back", (self.t_return is not None) == want,
+                f"RETURN at t={self.t_return} ({self.return_reason}) at {self.return_pos}" if self.t_return is not None else "never returned")
+        if "return_reason" in ex:
+            add(f"return reason contains '{ex['return_reason']}'", ex["return_reason"] in (self.return_reason or ""), self.return_reason)
+        if ex.get("home"):
+            d = math.dist((self.prev_pos or [0, 0])[:2], self.entrance)
+            add("reaches HOME", tel.get("home") is True, f"HOME at t={self.t_home}, {d:.2f} m from the entrance ({tel.get('note')})"
+                if self.t_home is not None else f"final nav {tel.get('nav')} ({tel.get('note')})")
+        if "home_max_entrance_m" in ex:
+            d = math.dist((self.prev_pos or [0, 0])[:2], self.entrance)
+            add(f"ends within {ex['home_max_entrance_m']} m of the entrance", d <= ex["home_max_entrance_m"], f"{d:.2f} m")
+        if ex.get("uploaded"):
+            f_ok = os.path.isfile(os.path.join(self.run_dir, "dashboard", "hazard_log.csv")) \
+                and os.path.isfile(os.path.join(self.run_dir, "dashboard", "summary.html"))
+            add("log uploaded to the dashboard", bool(tel.get("uploaded")) and f_ok,
+                f"uploaded at t={self.t_upload}, dashboard/ copy {'present' if f_ok else 'MISSING'}")
+        if "return_between_s" in ex:
+            lo, hi = ex["return_between_s"]
+            add(f"turns back between {lo} and {hi} s", self.t_return is not None and lo <= self.t_return <= hi, f"t={self.t_return}")
+        if "flushed_on" in ex:            # the rover's own log must show a flush on entering that state
+            evs = []
+            try:
+                with open(os.path.join(self.run_dir, "events.jsonl")) as fh:
+                    evs = [json.loads(line) for line in fh if line.strip()]
+            except (OSError, ValueError):
+                pass
+            fl = [e for e in evs if e.get("type") == "flush" and e.get("state") == ex["flushed_on"]]
+            add(f"log flushed on entering {ex['flushed_on']}", bool(fl), f"flush at t={fl[0]['t']} ({fl[0].get('note')})" if fl else "no flush event")
+        if ex.get("link_dropped"):
+            downs = [x for x in self.timeline if x[1] == "LINK" and x[2] == "down"]
+            add("link dropped on the way in", bool(downs), f"down at t={downs[0][0]}" if downs else "never dropped")
+        if "battery_level" in ex:
+            want = ex["battery_level"] if isinstance(ex["battery_level"], list) else [ex["battery_level"]]
+            add(f"battery level ends {'/'.join(want)}", tel.get("batt_level") in want,
+                f"{tel.get('batt_level')} (5 s average {tel.get('batt_avg')} V, lowest {tel.get('batt_min_avg')} V)")
+        if "link_at_end" in ex:
+            add(f"link {'up' if ex['link_at_end'] else 'down'} at the end", bool(tel.get("link")) == bool(ex["link_at_end"]), tel.get("link"))
         if "order" in ex:      # labels must first appear in this order
             idx = [seen.index(x) if x in seen else -1 for x in ex["order"]]
             add(f"order {' -> '.join(ex['order'])}", all(i >= 0 for i in idx) and idx == sorted(idx), f"seen: {seen}")
@@ -403,6 +612,16 @@ class MineSupervisor:
             "max_gas_ppm_at_rover": round(self.max_gas, 1),
             "min_distance_to_gas_m": None if self.min_gas_dist == float("inf") else round(self.min_gas_dist, 2),
             "attitude_filter_max_error_deg": tel.get("att_err"),
+            "direction": tel.get("dir"), "return_reason": self.return_reason, "returned_at_s": self.t_return,
+            "returned_from": self.return_pos, "home": bool(tel.get("home")), "home_at_s": self.t_home,
+            "home_position": self.home_pos, "uploaded": bool(tel.get("uploaded")), "uploaded_at_s": self.t_upload,
+            "entrance": [round(v, 3) for v in self.entrance],
+            "entrance_distance_m": round(math.dist((self.prev_pos or [0, 0])[:2], self.entrance), 2),
+            "driving_time_in_s": tel.get("out_s"), "driving_time_back_s": tel.get("ret_s"),
+            "link": bool(tel.get("link")), "link_changes": self.link_changes,
+            "battery": {"level": tel.get("batt_level"), "volts": tel.get("batt_v"), "avg_v": tel.get("batt_avg"),
+                        "min_avg_v": tel.get("batt_min_avg")},
+            "danger_holds": self.all_holds(), "barriers": self.barriers,
             "screenshots": [os.path.relpath(s, self.run_dir) for s in self.shots],
             "video": os.path.relpath(self.video_path, self.run_dir) if self.video_path else None,
         }
@@ -429,6 +648,8 @@ class MineSupervisor:
             while self.ev_i < len(self.events) and t >= self.events[self.ev_i]["t"]:
                 self.do_event(t, self.events[self.ev_i])
                 self.ev_i += 1
+            if self.triggered:
+                self.fire_triggered(t)
             if self.kicks:
                 fx, fy = self.kicks.pop(0)
                 self.rover.addForce([fx, fy, 0.0], False)
@@ -437,7 +658,9 @@ class MineSupervisor:
             if k % 5 == 0:                                   # 20 Hz radio
                 ppm = self.gas.ppm_at(p, t)
                 self.max_gas = max(self.max_gas, ppm)
-                msg = {"t": round(t, 3), "run": self.run_name}
+                msg = {"t": round(t, 3), "run": self.run_name, "link": self.update_link(t, p)}
+                if self.batt_charge is not None:
+                    msg["batt_charge"], self.batt_charge = self.batt_charge, None
                 if t >= self.gas_mute_until:
                     msg["gas"] = round(ppm, 2)
                     if self.pending_cmd:

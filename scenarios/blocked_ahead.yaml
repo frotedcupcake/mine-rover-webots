@@ -1,0 +1,21 @@
+# Dead end: the corridor just stops. After the 8 s spin finds nothing open in the +-100 degree
+# sector the rover turns back (RETURN, not STUCK), drives out and is HOME when the link returns.
+name: blocked_ahead
+world: corridor
+duration: 180
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+regions:
+  far_end: {x_min: 5.0}
+end_when: {uploaded: true, settle_s: 2.0, or_nav: [STUCK]}
+expect:
+  reach: [far_end]
+  returns: true
+  return_reason: "blocked ahead"
+  link_dropped: true
+  home: true
+  final_nav: HOME
+  home_max_entrance_m: 3.35
+  uploaded: true
+  max_collisions: 0
+  no_fall: true
