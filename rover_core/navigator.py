@@ -8,6 +8,13 @@ every mode, after the state logic:
   * stop on stale data
   * commands ramp up but drop to zero instantly
 The 0.4 s dead-man lives in MotorGuard, which the controller consults every 5 ms.
+
+Route heading: the direction the rover is making progress in (gyro yaw, the only heading
+the real rover has).  Set when AUTO starts, kept across back-to-back AVOIDs, and only
+re-based after `route_settle_s` of uninterrupted CRUISE (so a bend is adopted once the
+rover drives down the new tunnel, and a bad exit that hits something at once is not).
+AVOID only ends within +-`avoid_max_dev_deg` of it, sweeping back and forth between those
+two limits, and only after stopping and confirming the way is clear on settled readings.
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -22,6 +29,10 @@ CALIBRATING, CRUISE, AVOID, BACKOFF, SWEEP, HOLD, STUCK, IDLE = (
 INF = float("inf")
 
 
+def wrap180(a):
+    return (a + 180.0) % 360.0 - 180.0
+
+
 @dataclass
 class Command:
     left: float = 0.0
@@ -33,6 +44,7 @@ class Command:
     lamp_toggle: bool = False
     drop_rock: bool = False               # ask the supervisor for a roof fall (demo key)
     refused: Optional[str] = None         # why a manual forward command was refused
+    route: Optional[float] = None         # route heading (deg), AUTO only
 
 
 class MotorGuard:
@@ -80,6 +92,9 @@ class Navigator:
         self._t_prev = None
         # cruise
         self._yaw_ref = None
+        self._route = None                # route heading (deg, same frame as the gyro yaw)
+        self._cruise_since = None         # start of the current uninterrupted CRUISE
+        self._t_route = None
         self._bias_side = None            # 'left' / 'right': keep away from that side
         self._bias_until = -1e9
         # avoid
@@ -148,6 +163,7 @@ class Navigator:
 
         cmd.left, cmd.right = left, right
         cmd.mode, cmd.state, cmd.note = self.mode, self.state, self.note
+        cmd.route = self._route if self.mode == AUTO else None
         return cmd
 
     # ==================================================================
@@ -158,6 +174,8 @@ class Navigator:
         if mode == AUTO:
             self.state = CRUISE
             self._yaw_ref = None
+            self._route = None            # re-taken from the heading the rover now has
+            self._cruise_since = None
         else:
             self.state = IDLE
 
@@ -165,6 +183,11 @@ class Navigator:
         self.state = CRUISE
         self._yaw_ref = r.yaw_deg
         self.note = note
+        self._cruise_since = r.t
+
+    @property
+    def route_deg(self):
+        return self._route
 
     def _shape(self, t, left, right):
         """Ramp up, stop instantly; keep commands out of the dead zone."""
@@ -225,6 +248,8 @@ class Navigator:
             return 0.0, 0.0
         if self.state in (CALIBRATING, IDLE):
             self._enter_cruise(r, "go")
+        if self._route is None:
+            self._route = r.yaw_deg
 
         if a.sweep_request:
             self._pending_sweep = a.sweep_request
@@ -248,6 +273,7 @@ class Navigator:
             self.state = self._sweep_return
             if self.state == CRUISE:
                 self._yaw_ref = r.yaw_deg
+                self._cruise_since = r.t      # a pause interrupts "uninterrupted cruising"
             if self.state == HOLD:
                 self.note = f"holding: {self._hold_reason} (press R to resume)"
 
@@ -290,8 +316,19 @@ class Navigator:
                 dr = min(dr, self.n["bias_dist_m"])
         return dl, dr
 
+    def _update_route(self, t, r):
+        """After route_settle_s of uninterrupted CRUISE the route heading follows the rover."""
+        if self._cruise_since is None:
+            self._cruise_since = t
+        dt = 0.05 if self._t_route is None else min(0.2, max(0.0, t - self._t_route))
+        self._t_route = t
+        if t - self._cruise_since >= self.n["route_settle_s"]:
+            k = min(1.0, dt / max(1e-3, self.n["route_tau_s"]))
+            self._route += wrap180(r.yaw_deg - self._route) * k
+
     def _cruise(self, t, r):
         n, d = self.n, self.d
+        self._update_route(t, r)
         dl, dr = self._dists(t, r)
         real_near = r.front_dist
         if real_near < n["avoid_dist_m"] or r.ir_front_left or r.ir_front_right:
@@ -333,7 +370,15 @@ class Navigator:
             direction = -1 if self._bias_side == "left" else 1
         else:
             direction = 1
-        self._av = dict(t0=t, yaw0=r.yaw_deg, dir=direction, reversed=False, clear_since=None)
+        # already at (or past) a sector limit: turn back towards the route heading
+        dev = wrap180(r.yaw_deg - self._route)
+        lim = self.n["avoid_max_dev_deg"]
+        if dev >= lim:
+            direction = -1
+        elif dev <= -lim:
+            direction = 1
+        self._av = dict(t0=t, dir=direction, edges=0, phase="SPIN", t_phase=t, clear_since=None,
+                        skip_yaw=None)
         self.state = AVOID
         self.note = "avoid: spin " + ("left" if direction > 0 else "right")
 
@@ -343,22 +388,39 @@ class Navigator:
         dr = r.us_right if r.us_right is not None else INF
         clear = (min(dl, dr) >= n["clear_dist_m"] and max(dl, dr) >= n["open_dist_m"]
                  and not r.ir_front_left and not r.ir_front_right)
-        if clear:
-            if av["clear_since"] is None:
-                av["clear_since"] = t
-            if t - av["clear_since"] >= n["clear_time_s"]:
-                self._enter_cruise(r, "avoid done")
-                return self._cruise(t, r)
-        else:
-            av["clear_since"] = None
+        lim = n["avoid_max_dev_deg"]
+        dev = wrap180(r.yaw_deg - self._route)
         if t - av["t0"] > n["avoid_timeout_s"]:
             self.state = STUCK
             self.note = "STUCK: no clear direction found"
             return 0.0, 0.0
-        turned = (r.yaw_deg - av["yaw0"]) * av["dir"]
-        if not av["reversed"] and turned > n["avoid_reverse_deg"]:
-            av["dir"], av["reversed"] = -av["dir"], True
-            self.note = "avoid: other way"
+        if av["phase"] == "CONFIRM":
+            # stopped: wait for the sonar median to refresh, then it must stay clear
+            if t - av["t_phase"] < n["confirm_settle_s"]:
+                return 0.0, 0.0
+            if clear and abs(dev) <= lim:
+                if av["clear_since"] is None:
+                    av["clear_since"] = t
+                if t - av["clear_since"] >= n["clear_time_s"] - 1e-9:
+                    self._enter_cruise(r, "avoid done")
+                    return self._cruise(t, r)
+                return 0.0, 0.0
+            # not clear after all: keep turning the same way, past this spot
+            av["phase"], av["clear_since"], av["skip_yaw"] = "SPIN", None, r.yaw_deg
+            self.note = "avoid: not clear, turning on"
+        if av["skip_yaw"] is not None and abs(r.yaw_deg - av["skip_yaw"]) >= n["confirm_skip_deg"]:
+            av["skip_yaw"] = None
+        if clear and abs(dev) <= lim and av["skip_yaw"] is None:
+            av["phase"], av["t_phase"], av["clear_since"] = "CONFIRM", t, None
+            self.note = "avoid: stop and check"
+            return 0.0, 0.0
+        # sweep back and forth between the two sector limits
+        if av["dir"] > 0 and dev >= lim:
+            av["dir"], av["edges"] = -1, av["edges"] + 1
+            self.note = "avoid: sector limit, other way"
+        elif av["dir"] < 0 and dev <= -lim:
+            av["dir"], av["edges"] = 1, av["edges"] + 1
+            self.note = "avoid: sector limit, other way"
         s = self.d["spin"] * av["dir"]
         return -s, s
 

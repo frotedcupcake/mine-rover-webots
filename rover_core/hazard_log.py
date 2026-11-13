@@ -6,7 +6,7 @@ import os
 
 CSV_FIELDS = ["t", "level", "reason", "nav", "mode", "us_left_m", "us_right_m", "ir_front_left",
               "ir_front_right", "floor_lost_left", "floor_lost_right", "pitch_deg", "roll_deg",
-              "yaw_deg", "gas_ppm", "gas_slope", "left_cmd", "right_cmd"]
+              "yaw_deg", "gas_ppm", "gas_slope", "left_cmd", "right_cmd", "route_deg"]
 LEVEL_COLOUR = {"SAFE": "#2e9e4f", "CAUTION": "#d98a00", "DANGER": "#d0312d"}
 
 
@@ -42,7 +42,8 @@ class HazardLog:
             "floor_lost_left": int(r.floor_lost_left), "floor_lost_right": int(r.floor_lost_right),
             "pitch_deg": _num(r.pitch_deg, 1), "roll_deg": _num(r.roll_deg, 1), "yaw_deg": _num(r.yaw_deg, 1),
             "gas_ppm": _num(r.gas_ppm, 1), "gas_slope": _num(a.gas_slope, 1),
-            "left_cmd": _num(cmd.left, 2), "right_cmd": _num(cmd.right, 2)})
+            "left_cmd": _num(cmd.left, 2), "right_cmd": _num(cmd.right, 2),
+            "route_deg": _num(getattr(cmd, "route", None), 1)})
         self._csv_fh.flush()
         return True
 

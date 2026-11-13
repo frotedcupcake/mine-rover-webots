@@ -85,8 +85,19 @@ Each entry: what was decided, and why. Items that go beyond the brief are marked
 - **AVOID leaves only when both sonars read 50 cm clear for 0.25 s *and* one of them sees at
   least 1 m of room.** Facing a side wall from the middle of a 1.2 m tunnel reads just over
   50 cm, which alone would let the rover exit pointing at a wall. **addition**
-- **AVOID reverses its spin after 100 degrees**, so a wrong first guess at a bend or dead end
-  recovers instead of sending the rover back the way it came. **addition**
+- **Route heading (gyro yaw).** Set when AUTO starts, kept through back-to-back AVOIDs, and
+  re-based only after 3 s of uninterrupted CRUISE (then low-pass, tau 2 s). No encoders on the
+  real rover, so it is time-based, not distance-based. **addition (step-0 fix, 2026-11-13)**
+- **AVOID only finishes within +/-100 degrees of the route heading.** It sweeps between the two
+  sector limits instead of spinning freely. Replaces the old "reverse the spin after 100
+  degrees" rule, which let two chained AVOIDs turn the rover round at the third rubble pile
+  (89 -> 150 -> 250 degrees). **addition (step-0 fix)**
+- **Stop-and-confirm exit.** On the first clear reading inside the sector the rover stops, waits
+  0.2 s, then needs 0.25 s of clear readings. If the check fails it turns on the same way and
+  ignores clear readings for the next 10 degrees. No clear direction after 8 s -> STUCK "no
+  clear direction found" (to become RETURN). **addition (step-0 fix)**
+- **The only route bend in the mine is +90 degrees** (tunnel A -> B), 10 degrees inside the
+  sector; in all logged mine runs it was taken in CRUISE (route lag at most 30.6 degrees).
 - **One-sided pit: after the 60 degree turn the rover sidesteps for 1.3 s, then turns back
   to its original heading**, then biases away from that side for 8 s. A plain 60 degree turn
   in a 1.2 m tunnel just points the rover at the opposite wall. **addition**
@@ -108,8 +119,12 @@ Each entry: what was decided, and why. Items that go beyond the brief are marked
   10 ms pushes of about 45 N.
 - **Run folder name comes from the supervisor** and is radioed to the rover so both write to
   the same `reports/<run>/`.
-- **Seeds** change the start pose, `WorldInfo.randomSeed` (through a temporary copy of the
-  world), IMU/gas noise and motor mismatch.
+- **Two independent seeds.** Noise seed (`MINE_NOISE_SEED`): `WorldInfo.randomSeed` (through a
+  temporary copy of the world), IMU/gas noise and motor mismatch. Shift seed (`MINE_SHIFT_SEED`):
+  start-pose shift (0 = none) and where dropped rocks land. The rover's default noise seed is 1,
+  matching `randomSeed 1` in the world files, so plain `./run.sh` is exactly noise 1 / shift 0.
+  Runner: `--seed N` (both N), `--noise-seed`, `--shift-seed`, `--combos NOISE:SHIFT`; run
+  folders are `<scenario>_n<noise>s<shift>`. Legacy `MINE_SEED` is still read as a fallback.
 - **The `roof_fall` scenario is the corridor world plus a timed event**; there is no
   separate rock-fall world.
 - **`side_pit` and `roof_fall` do not check collisions**, because the brief lists no

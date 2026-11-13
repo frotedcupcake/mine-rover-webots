@@ -74,7 +74,13 @@ navigator:
   clear_dist_m: 0.50
   clear_time_s: 0.25
   open_dist_m: 1.00          # at least one sonar must see this much room before leaving AVOID
-  avoid_reverse_deg: 100     # AVOID tries the other direction after turning this far
+  avoid_max_dev_deg: 100     # (addition) AVOID only ends within this of the route heading; it
+                             #   sweeps back and forth between the two limits
+  confirm_settle_s: 0.20     # (addition) AVOID stops on a clear reading, waits this long for the
+                             #   sonar median to refresh, then needs clear_time_s of clear readings
+  confirm_skip_deg: 10       # (addition) after a failed check, turn on this far before checking again
+  route_settle_s: 3.0        # (addition) route heading re-bases only after this long of uninterrupted CRUISE
+  route_tau_s: 2.0           # (addition) ... and then follows the heading with this time constant
   avoid_timeout_s: 8.0
   backoff_reverse_s: 0.7
   backoff_turn_deg: 60

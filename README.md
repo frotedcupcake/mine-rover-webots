@@ -72,8 +72,10 @@ tools/make_demo.sh                                            # screenshots + vi
 | `mine` | mine | no collision, no fall, reaches the gas, DANGER, HOLD |
 | `gas_dropout` (addition) | corridor | gas radio silent for 3 s gives CAUTION STALE_DATA and a stop, then the rover carries on |
 
-A seed changes the start pose, the Webots sensor noise, the IMU/gas noise and the motor
-mismatch. Scenario files are plain yaml (`scenarios/*.yaml`): world, duration, timed events
+Each run has two seeds. The noise seed sets the Webots sensor noise, the IMU/gas noise and the
+motor mismatch; the shift seed sets the start-pose shift (0 = none) and where dropped rocks land.
+`--seed N` sets both; `--noise-seed`/`--shift-seed` set one, and `--all --combos 1:0 2:7` takes
+NOISE:SHIFT pairs. `./run.sh` is noise seed 1, shift seed 0. Scenario files are plain yaml (`scenarios/*.yaml`): world, duration, timed events
 (`roof_fall`, `gas_dropout`, `cmd`), an early-finish condition and the expected outcomes.
 `run_scenario.py` exits with code 0 on pass and 1 on fail (it reads the verdict from `metrics.json`).
 

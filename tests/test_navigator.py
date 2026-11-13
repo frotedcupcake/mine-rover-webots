@@ -4,7 +4,7 @@ from conftest import DT, mk
 
 from rover_core.fusion import HazardFusion
 from rover_core.navigator import (AUTO, AVOID, BACKOFF, CRUISE, HOLD, MANUAL, STOP, STUCK, SWEEP,
-                                  MotorGuard, Navigator, snap)
+                                  MotorGuard, Navigator, snap, wrap180)
 
 
 class Rig:
@@ -105,14 +105,82 @@ def test_front_ir_triggers_avoid_away_from_that_side(rig):
     assert c.state == AVOID and c.left > 0 > c.right  # spin right
 
 
-def test_avoid_exits_after_clear_for_quarter_second(rig):
+def test_avoid_stops_on_clear_and_confirms_before_leaving(rig):
     rig.run(0.5)
     rig.run(0.5, us_right=0.25, us_left=0.9)
     assert rig.cmd.state == AVOID
-    rig.run(0.2, us_right=0.6, us_left=1.5)           # clear, but not yet for 0.25 s
-    assert rig.cmd.state == AVOID
-    rig.run(0.2, us_right=0.6, us_left=1.5)
+    c = rig.step(us_right=0.6, us_left=1.5)           # first clear reading: stop, don't leave yet
+    assert c.state == AVOID and (c.left, c.right) == (0.0, 0.0)
+    rig.run(0.35, us_right=0.6, us_left=1.5)          # settle 0.2 s + clear 0.25 s not yet done
+    assert rig.cmd.state == AVOID and (rig.cmd.left, rig.cmd.right) == (0.0, 0.0)
+    rig.run(0.15, us_right=0.6, us_left=1.5)
     assert rig.cmd.state == CRUISE
+
+
+def test_avoid_confirm_fails_then_keeps_turning_the_same_way(rig):
+    rig.run(0.5)
+    rig.run(0.3, us_right=0.25, us_left=0.9)          # spin left
+    rig.step(us_right=0.6, us_left=1.5)               # momentary clear -> stop and check
+    rig.run(0.25, us_right=0.6, us_left=1.5)
+    c = rig.run(0.1, us_right=0.3, us_left=1.5)       # settled reading: not clear after all
+    assert c.state == AVOID and c.left < 0 < c.right  # turning on, same direction
+    c = rig.run(0.1, us_right=0.6, us_left=1.5, yaw_deg=3.0)   # clear again too soon (< 10 deg on)
+    assert c.left < 0 < c.right
+
+
+def spin_sim(rig, make_kw, secs, rate=4.0):
+    """Integrate yaw from the spin command (rate deg per 50 ms step); returns yaw trace."""
+    yaw = {"v": rig.nav.route_deg if rig.nav.route_deg is not None else 0.0}
+    trace = []
+    for _ in range(int(round(secs / DT))):
+        c = rig.cmd
+        if c is not None and c.state == AVOID and c.left != c.right:
+            yaw["v"] += rate * (1 if c.right > c.left else -1)
+        rig.step(**make_kw(yaw["v"]))
+        trace.append((rig.cmd.state, yaw["v"]))
+    return trace
+
+
+def test_avoid_never_leaves_facing_more_than_100_deg_off_the_route(rig):
+    rig.run(0.5)                                      # route heading = 0
+    rig.run(0.3, us_right=0.25, us_left=0.25)
+    assert rig.cmd.state == AVOID
+
+    def kw(yaw):                                      # only "open" when facing back down the tunnel
+        open_ = abs(wrap180(yaw)) > 110
+        return dict(us_left=1.5 if open_ else 0.25, us_right=1.5 if open_ else 0.25, yaw_deg=yaw)
+    trace = spin_sim(rig, kw, 9.0)
+    assert all(abs(wrap180(y)) <= 100 + 8 for st, y in trace if st == AVOID)   # one step of overshoot
+    assert rig.cmd.state == STUCK                     # blocked ahead: nothing in the sector
+
+
+def test_back_to_back_avoids_keep_the_original_route(rig):
+    rig.run(0.5)                                      # route 0
+    rig.run(0.3, us_right=0.25, us_left=0.9, yaw_deg=0.0)
+    # first AVOID leaves at +60 deg
+    rig.run(0.6, us_right=0.6, us_left=1.5, yaw_deg=60.0)
+    assert rig.cmd.state == CRUISE
+    rig.run(0.5, yaw_deg=60.0)                        # cruising < route_settle_s
+    rig.run(0.1, us_right=0.2, us_left=0.6, yaw_deg=60.0)
+    assert rig.cmd.state == AVOID
+    assert rig.nav.route_deg == pytest.approx(0.0)
+    # clear at +150 is outside the original sector: no stop-and-check, keeps spinning
+    c = rig.run(0.2, us_right=1.5, us_left=1.5, yaw_deg=150.0)
+    assert c.state == AVOID and c.left != c.right
+
+
+def test_route_rebases_after_three_seconds_of_cruising(rig):
+    rig.run(0.5)
+    rig.run(2.5, yaw_deg=90.0)                        # e.g. steered through a bend
+    assert rig.nav.route_deg == pytest.approx(0.0)    # not yet 3 s of uninterrupted CRUISE
+    rig.run(6.0, yaw_deg=90.0)
+    assert rig.nav.route_deg == pytest.approx(90.0, abs=5)
+
+
+def test_avoid_started_outside_the_sector_turns_back_towards_the_route(rig):
+    rig.run(0.5)                                      # route 0
+    c = rig.run(0.2, us_right=0.2, us_left=0.9, yaw_deg=120.0)   # would spin left, but already past +100
+    assert c.state == AVOID and c.left > 0 > c.right  # spins right, back into the sector
 
 
 def test_avoid_needs_real_room_ahead_not_just_50cm(rig):

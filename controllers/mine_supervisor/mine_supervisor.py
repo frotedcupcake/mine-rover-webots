@@ -7,7 +7,7 @@
 * scenarios: timed events + expected outcomes from scenarios/<name>.yaml, pass/fail exit code
 * hazard label in the 3D view, chase camera, screenshots, video
 
-Environment: MINE_SCENARIO (yaml path), MINE_SEED, MINE_RUN (report folder name),
+Environment: MINE_SCENARIO (yaml path), MINE_NOISE_SEED, MINE_SHIFT_SEED, MINE_RUN (report folder name),
 MINE_VIDEO=1, MINE_SHOTS=1, MINE_CHASE=0/1.
 """
 import json
@@ -61,7 +61,10 @@ class MineSupervisor:
         self.basic = int(sup.getBasicTimeStep())
         self.ts = 2 * self.basic                       # 10 ms
         self.world = sup.getCustomData() or os.path.splitext(os.path.basename(sup.getWorldPath()))[0]
-        self.seed = int(os.environ.get("MINE_SEED", "0") or 0)
+        # shift seed: start-pose shift (0 = none) and where dropped rocks land.
+        # noise seed is only reported here (Webots randomSeed + the rover's own noise).
+        self.seed = int(os.environ.get("MINE_SHIFT_SEED") or os.environ.get("MINE_SEED") or 0)
+        self.noise_seed = int(os.environ.get("MINE_NOISE_SEED") or os.environ.get("MINE_SEED") or 1)
         self.rng = random.Random(self.seed)
         self.scenario = None
         spath = os.environ.get("MINE_SCENARIO")
@@ -138,7 +141,7 @@ class MineSupervisor:
         tr.setSFVec3f([p[0] + dx, p[1] + dy, p[2]])
         rot.setSFRotation([0, 0, 1, yaw0 + dyaw])
         self.rover.resetPhysics()
-        print(f"[sup] seed {self.seed}: start offset dx={dx:+.3f} dy={dy:+.3f} dyaw={math.degrees(dyaw):+.1f} deg", flush=True)
+        print(f"[sup] shift seed {self.seed}: start offset dx={dx:+.3f} dy={dy:+.3f} dyaw={math.degrees(dyaw):+.1f} deg", flush=True)
 
     # ------------------------------------------------------------------
     def roof_fall(self, t):
@@ -387,7 +390,7 @@ class MineSupervisor:
         tel = self.tel
         m = {
             "run": self.run_name, "world": self.world, "scenario": (self.scenario or {}).get("name"),
-            "seed": self.seed, "duration_s": round(t, 2), "path_length_m": round(self.path_len, 3),
+            "noise_seed": self.noise_seed, "shift_seed": self.seed, "duration_s": round(t, 2), "path_length_m": round(self.path_len, 3),
             "collisions": len(self.collisions), "collision_events": self.collisions[:20],
             "fell_in_pit": self.fell, "fell_at_s": self.fell_t,
             "final_position": [round(v, 3) for v in (self.prev_pos or [0, 0, 0])],
@@ -415,7 +418,7 @@ class MineSupervisor:
     def run(self):
         sup = self.sup
         self.jitter_start()
-        print(f"[sup] world '{self.world}' run '{self.run_name}' seed {self.seed} "
+        print(f"[sup] world '{self.world}' run '{self.run_name}' noise seed {self.noise_seed} shift seed {self.seed} "
               f"scenario {(self.scenario or {}).get('name')} gas sources {len(self.gas.sources)}", flush=True)
         k = 0
         t = 0.0
@@ -484,7 +487,7 @@ class MineSupervisor:
             if not ok:
                 self.video_path = None
         m = self.metrics(sup.getTime(), final=True)
-        print(f"[sup] scenario '{self.scenario.get('name')}' seed {self.seed}: "
+        print(f"[sup] scenario '{self.scenario.get('name')}' noise {self.noise_seed} shift {self.seed}: "
               f"{'PASS' if m.get('passed') else 'FAIL'}", flush=True)
         for c in m.get("checks", []):
             print(f"[sup]   {'ok  ' if c['ok'] else 'FAIL'} {c['check']}  ({c['detail']})", flush=True)

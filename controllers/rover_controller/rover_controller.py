@@ -39,7 +39,9 @@ class Rover:
         self.ts = int(r.getBasicTimeStep())
         overrides = json.loads(os.environ.get("MINE_CFG", "{}") or "{}")
         self.cfg = cfg = config.load(overrides=overrides)
-        self.seed = int(os.environ.get("MINE_SEED", "0") or 0)
+        # noise seed: IMU / gas noise and motor mismatch. Default 1 matches randomSeed 1 in the
+        # world files, so a plain ./run.sh is "noise seed 1" (the scenario runner sets both).
+        self.seed = int(os.environ.get("MINE_NOISE_SEED") or os.environ.get("MINE_SEED") or 1)
         self.loop_div = max(1, round(1000.0 / cfg["loop_hz"] / self.ts))
 
         # ---- devices ----
@@ -301,7 +303,8 @@ class Rover:
         self.prev_hazards = hazards
         navkey = (cmd.mode, cmd.state)
         if navkey != self.prev_nav:
-            log.event(t, "nav", mode=cmd.mode, state=cmd.state, note=cmd.note)
+            log.event(t, "nav", mode=cmd.mode, state=cmd.state, note=cmd.note,
+                      yaw=round(r.yaw_deg, 1), route=None if cmd.route is None else round(cmd.route, 1))
             if cmd.state not in self.seen_nav:
                 self.seen_nav.append(cmd.state)
             self.prev_nav = navkey
@@ -312,7 +315,8 @@ class Rover:
                 return " -- " if v is None else f"{v:4.2f}"
             gas = "warm-up" if r.gas_ppm is None else f"{r.gas_ppm:4.0f}ppm {a.gas_slope:+5.1f}/s"
             print(f"[{t:6.1f}s] {cmd.mode}/{cmd.state:<11} {a.level:<7} {a.reason:<12} us L{fmt(r.us_left)} R{fmt(r.us_right)} m"
-                  f"  gas {gas}  tilt {r.tilt_deg:4.1f}  yaw {r.yaw_deg:+7.1f}  cmd {cmd.left:+.2f} {cmd.right:+.2f}"
+                  f"  gas {gas}  tilt {r.tilt_deg:4.1f}  yaw {r.yaw_deg:+7.1f}"
+                  f"  route {'  --  ' if cmd.route is None else format(cmd.route, '+6.1f')}  cmd {cmd.left:+.2f} {cmd.right:+.2f}"
                   f"  {cmd.note}", flush=True)
         if t >= self.next_summary:
             self.next_summary = t + 10.0
