@@ -16,6 +16,7 @@ drive:
   deadman_s: 0.4             # motors stop if no fresh command for this long
   steer_gain: 0.45           # cruise steering authority
   heading_hold_gain: 0.02    # per degree of gyro-yaw error while cruising straight
+  centre_gain: 0.3           # per metre of left/right difference (capped at 0.12)
   motor_mismatch: 0.03       # simulated left/right motor gain mismatch (+-3 %, seeded)
 
 ultrasonic:
@@ -80,7 +81,12 @@ navigator:
   tilt_clear_deg: 10         # tilt back-off keeps reversing until tilt is below this
   tilt_reverse_max_s: 3.0
   bias_s: 8.0                # keep away from the edge that was found for this long
-  bias_dist_m: 0.45          # virtual obstacle distance on the biased side
+  bias_dist_m: 0.60          # virtual obstacle distance on the biased side
+  sidestep_s: 1.3            # after the 60 deg turn: move over this long, then face forward again
+  sidestep_stop_m: 0.33      # ... or until something is this close
+  sidestep_align_deg: 8
+  centre_max_m: 1.6          # both sonars under this -> drift gently to the more open side
+  centre_deadband_m: 0.10
   pit_count: 3               # this many pits ...
   pit_window_s: 120.0        # ... within this long -> STUCK "route blocked"
   manual_block_m: 0.15       # manual forward refused when something is this close

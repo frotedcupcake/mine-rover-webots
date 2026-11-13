@@ -302,7 +302,14 @@ class Navigator:
         span = n["slow_dist_m"] - n["avoid_dist_m"]
         cl = min(1.0, max(0.0, (n["slow_dist_m"] - dl) / span))
         cr = min(1.0, max(0.0, (n["slow_dist_m"] - dr) / span))
-        if cl == 0.0 and cr == 0.0:
+        centre_max = n.get("centre_max_m", 0.0)
+        if cl == 0.0 and cr == 0.0 and dl < centre_max and dr < centre_max and t >= self._bias_until \
+                and abs(dl - dr) > n.get("centre_deadband_m", 0.1):
+            # both walls in view and nothing near: drift gently towards the more open side
+            w = max(-0.12, min(0.12, d.get("centre_gain", 0.3) * (dl - dr)))
+            self._yaw_ref = r.yaw_deg
+            self.note = "cruise (centring)"
+        elif cl == 0.0 and cr == 0.0:
             # nothing near: hold the gyro heading so the rover tracks straight
             if self._yaw_ref is None:
                 self._yaw_ref = r.yaw_deg
@@ -404,10 +411,26 @@ class Navigator:
         if bo["phase"] == "TURN":
             turned = (r.yaw_deg - bo["yaw0"]) * bo["dir"]
             if turned >= bo["angle"] or t - bo["t_phase"] > n["backoff_turn_timeout_s"]:
-                if bo["side"] in ("left", "right"):
-                    self._bias_side, self._bias_until = bo["side"], t + n["bias_s"]
-                self._enter_cruise(r, "backoff done")
+                if bo["side"] in ("left", "right") and bo["cause"] == FLOOR_LOST:
+                    bo["phase"], bo["t_phase"] = "SIDESTEP", t
+                else:
+                    self._enter_cruise(r, "backoff done")
+                    return self._cruise(t, r)
+            else:
+                s = d["spin"] * bo["dir"]
+                return -s, s
+        if bo["phase"] == "SIDESTEP":
+            # reroute: move over, away from the edge, then face the original heading again
+            blocked = (r.front_dist < n["sidestep_stop_m"] or r.ir_front_left or r.ir_front_right)
+            if t - bo["t_phase"] < n["sidestep_s"] and not blocked:
+                return d["slow"], d["slow"]
+            bo["phase"], bo["t_phase"] = "RETURN", t
+        if bo["phase"] == "RETURN":
+            err = bo["yaw0"] - r.yaw_deg              # yaw0 = heading when the turn started
+            if abs(err) <= n["sidestep_align_deg"] or t - bo["t_phase"] > n["backoff_turn_timeout_s"]:
+                self._bias_side, self._bias_until = bo["side"], t + n["bias_s"]
+                self._enter_cruise(r, "backoff done: rerouted " + ("right" if bo["side"] == "left" else "left"))
                 return self._cruise(t, r)
-            s = d["spin"] * bo["dir"]
+            s = d["spin"] * (1 if err > 0 else -1)
             return -s, s
         return 0.0, 0.0

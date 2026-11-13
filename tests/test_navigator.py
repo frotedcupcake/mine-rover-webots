@@ -141,13 +141,13 @@ def test_avoid_reverses_direction_then_times_out_stuck(rig):
 
 
 # ---------------------------------------------------------------- backoff
-def run_backoff(rig, side_kw, yaw_rate=90.0):
+def run_backoff(rig, side_kw, yaw_rate=90.0, secs=14):
     """Drive into a pit edge; simulate yaw from the spin command. Returns visited (state, sign) list."""
     yaw = {"v": 0.0}
     seen = []
     rig.run(0.5)
     t_edge = rig.t
-    for _ in range(int(14 / DT)):
+    for _ in range(int(secs / DT)):
         lost = rig.t - t_edge < 0.4 or (rig.cmd.state == BACKOFF and rig.nav._bo["phase"] == "WAIT")
         kw = dict(side_kw) if lost else {}
         if rig.cmd.left * rig.cmd.right < 0:
@@ -172,7 +172,10 @@ def test_pit_on_left_backs_off_sweeps_reverses_turns_right(rig):
     assert 0.6 <= len(rev) * DT <= 0.85               # reversed ~0.7 s
     turn = [s for s in seen if s[0] == BACKOFF and s[1] > 0 > s[2]]
     assert turn                                       # spun right (away from the left edge)
-    assert -75 < seen[-1][3] < -55                    # ~60 deg to the right
+    assert -75 < min(s[3] for s in seen) < -55        # ~60 deg to the right ...
+    side = [s for s in seen if s[0] == BACKOFF and s[1] > 0 and s[2] > 0]
+    assert 1.0 <= len(side) * DT <= 1.5               # ... a short sidestep ...
+    assert abs(seen[-1][3]) < 12                      # ... then facing the original way again
     assert states[-1] == CRUISE
     # while biased away from the left edge the rover hugs the other side
     assert rig.nav._bias_side == "left"
@@ -184,11 +187,11 @@ def test_pit_on_both_sides_turns_160(rig):
 
 
 def test_bias_keeps_rover_away_from_the_pit_side(rig):
-    yaw = run_backoff(rig, dict(floor_lost_left=True, floor_raw_left=True))[-1][3]
-    rig.nav._bias_until = rig.t + 4.0                 # (the scripted back-off above used up most of the 8 s)
+    yaw = run_backoff(rig, dict(floor_lost_left=True, floor_raw_left=True), secs=7)[-1][3]
+    assert rig.cmd.state == CRUISE and rig.nav._bias_until > rig.t
     c = rig.step(yaw_deg=yaw)                         # nothing in view, but still inside the bias window
     assert c.left > c.right                           # steering right, away from the left edge
-    rig.run(5.0, yaw_deg=yaw)                         # bias expired: straight again
+    rig.run(9.0, yaw_deg=yaw)                         # bias expired: straight again
     assert rig.cmd.left == pytest.approx(rig.cmd.right)
 
 
