@@ -4,7 +4,7 @@ world: mine
 duration: 300
 render: false
 start_jitter: {x: 0.04, y: 0.06, yaw_deg: 4}
-overview: {position: [4.9, 2.3, 14.5], orientation: [0, 1, 0, 1.5708]}   # used with --shots
+overview: {position: [4.6, 2.3, 23], orientation: [0, 1, 0, 1.5708]}   # used with --shots
 regions:
   past_pit: {x_min: 7.0}
   tunnel_b: {y_min: 1.0, x_min: 7.9}
