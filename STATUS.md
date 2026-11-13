@@ -1,5 +1,11 @@
 # STATUS — read this first
 
+> **Current state (2026-11-13):** the step-0 fix (AVOID route heading, +/-100 deg sector,
+> stop-and-confirm exit; noise/shift seeds split) is committed. `pit_ahead` is a known 4/7
+> failure that the next piece of work (RETURN mode, approved, not started) resolves.
+> **HANDOFF.md** has where the work stopped, the full RETURN design, the test-campaign plan
+> and the exact next step. Read it before changing anything.
+
 Everything in the brief is built and was run. The work stopped once part-way (a usage
 limit) and was resumed and finished afterwards.
 
@@ -15,8 +21,16 @@ limit) and was resumed and finished afterwards.
 - **Reports** per run: `hazard_log.csv`, `events.jsonl`, `sweeps/`, `metrics.json`, `summary.html`.
 
 ## Test results (all actually run)
-- **pytest: 84 passed** (`.venv/bin/python -m pytest tests`).
-- **Scenarios, seeds 1–5: 40/40 passed** — table in `reports/scenario_results.md`.
+- **pytest: 89 passed** after the step-0 fix (`.venv/bin/python -m pytest tests`).
+- **After the step-0 fix, 8 scenarios x 7 noise/shift combos: 53/56** — table in
+  `reports/scenario_results.md`. All 3 failures are `pit_ahead` (n0s0, n3s3, n5s5): a
+  full-width pit turns the rover round, and at the adit wall the new +/-100 deg sector leaves
+  no exit, so it ends STUCK "no clear direction found" instead of "route blocked". 0
+  collisions, no fall. Details in HANDOFF.md section 4.
+- **Mine after the fix: 21/21** over 21 noise/shift combos, and `./run.sh` x3 with the window
+  open reaches the gas (1.26 m), DANGER at 75.4 s, HOLD, 0 collisions.
+- The results below are from **before** the step-0 fix (single seed):
+- **Scenarios, seeds 1–5: 40/40 passed.**
 
   | scenario | pass rate |
   |---|---|
@@ -51,11 +65,10 @@ limit) and was resumed and finished afterwards.
 - Rebuild all of it with `tools/make_demo.sh` (opens Webots windows, about 5 minutes).
 
 ## Not verified, or weaker than it looks
-- **Keyboard control was never exercised.** Nobody was at the keyboard. The key logic is
-  unit-tested, but W A S D, Space, M, X, R, C, L, V and D in the live GUI are untested.
-  Try them first.
-- **`./run.sh` as a normal interactive session was not tried.** The GUI was only opened by
-  the scenario runner (batch mode with a visible window).
+- **Keyboard control was tried once by the user** in a live `./run.sh` session (2026-11-13):
+  the keys they tried worked. No systematic key test exists yet.
+- **`./run.sh` was run interactively** (2026-11-13). That session exposed the turnaround at
+  the third rubble pile, now fixed.
 - **The ramp in the mine's side bay is scenery.** The rover does not go there in AUTO; the
   ramp behaviour is only tested in the `ramp` world.
 - **`useMeshes` was checked with a placeholder box STL only** (it loaded without errors).
@@ -72,13 +85,18 @@ limit) and was resumed and finished afterwards.
 - Pipe and cable along the wall instead of a rail track.
 - IR colour sensitivity is off; IMU noise, gyro bias, dead zone and motor mismatch are added
   in the controller.
-- Navigator additions: AVOID needs 1 m of open room to exit and reverses after 100 degrees;
-  one-sided pits get a sidestep; gentle centring between walls.
+- Navigator additions: AVOID needs 1 m of open room to exit, only finishes within +/-100 deg
+  of a gyro route heading (re-based after 3 s of cruising) and stops to confirm before
+  leaving; one-sided pits get a sidestep; gentle centring between walls.
+- Seeds: noise seed and start-shift seed are separate; `./run.sh` = noise 1, shift 0.
 - Roof-fall additions: own-motion allowance, cancel if the rover turns, forward IR counts.
 - A GateGuard hook on this machine blocks the first write of each new file, which slowed
   the build.
 
 ## What to do next
+**The project's next step is in HANDOFF.md section 7** (battery numbers from the user, then
+RETURN mode, then the 6-layer test campaign). The list below is the original hand-over for
+the user and still applies:
 1. `./run.sh` and try the keyboard: `M`, drive with W A S D, `X`, `A` for AUTO, `D` for a
    rock fall, `R` to resume. Note anything that does not respond.
 2. Watch `reports/demo/mine_run.mp4` and open `reports/demo/mine_summary.html`.
