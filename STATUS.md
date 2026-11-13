@@ -42,7 +42,7 @@ limit) and was resumed and finished afterwards.
   roll 0.9 deg, gyro-yaw drift 0.8 deg.
 
 ## Where the demo outputs are
-- `reports/demo/mine_run.mp4` — the full mine run, 1280x720.
+- `reports/demo/mine_run.mp4` — the full mine run, 91 s, 1280x720, 7 MB.
 - `reports/demo/mine_00_overview.jpg` — cut-away view of the mine from above.
 - `reports/demo/<scenario>_NN_tSSS_<LEVEL>_<REASON>.jpg` — the 3D view at each hazard moment.
 - `reports/demo/<scenario>_rovercam_*.jpg` and `reports/demo/sweeps/` — the rover's own

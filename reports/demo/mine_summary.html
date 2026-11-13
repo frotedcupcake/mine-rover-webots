@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset='utf-8'>
+<title>Mine rover run demo_mine</title>
+<style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:24px;background:#16130f;color:#e8e2d8}h1,h2{font-weight:600}table{border-collapse:collapse;margin:8px 0 20px}td,th{border:1px solid #4a4238;padding:4px 10px;text-align:left;font-size:14px}th{background:#2a241d}.lvl{font-weight:700}.imgs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 22px}.imgs figure{margin:0}.imgs img{width:300px;border:1px solid #4a4238}figcaption{font-size:12px;color:#b5ab9c}code{color:#d8c9a8}</style></head><body>
+<h1>Mine rover run demo_mine</h1>
+<p>Run folder: <code>demo_mine</code> &middot; 3 hazard events &middot; 15 sweep images</p>
+<h2>Metrics</h2><table>
+<tr><th>run</th><td>demo_mine</td></tr>
+<tr><th>world</th><td>mine</td></tr>
+<tr><th>scenario</th><td>mine</td></tr>
+<tr><th>seed</th><td>1</td></tr>
+<tr><th>duration_s</th><td>90.56</td></tr>
+<tr><th>path_length_m</th><td>12.396</td></tr>
+<tr><th>collisions</th><td>0</td></tr>
+<tr><th>collision_events</th><td>[]</td></tr>
+<tr><th>fell_in_pit</th><td>False</td></tr>
+<tr><th>fell_at_s</th><td>None</td></tr>
+<tr><th>final_position</th><td>[8.6, 4.123, 0.065]</td></tr>
+<tr><th>final_level</th><td>CAUTION</td></tr>
+<tr><th>final_reason</th><td>GAS_ELEVATED</td></tr>
+<tr><th>final_mode</th><td>AUTO</td></tr>
+<tr><th>final_nav</th><td>HOLD</td></tr>
+<tr><th>final_note</th><td>holding: GAS_BUILDUP (press R to resume)</td></tr>
+<tr><th>hazards_seen</th><td>[&quot;SAFE CLEAR&quot;, &quot;SAFE OBSTACLE&quot;, &quot;CAUTION FLOOR_LOST&quot;, &quot;CAUTION GAS_ELEVATED&quot;, &quot;DANGER GAS_BUILDUP&quot;]</td></tr>
+<tr><th>nav_states_seen</th><td>[&quot;CALIBRATING&quot;, &quot;CRUISE&quot;, &quot;AVOID&quot;, &quot;SWEEP&quot;, &quot;BACKOFF&quot;, &quot;HOLD&quot;]</td></tr>
+<tr><th>hazard_timeline</th><td>[[0.06, &quot;SAFE&quot;, &quot;CLEAR&quot;], [17.16, &quot;SAFE&quot;, &quot;OBSTACLE&quot;], [17.46, &quot;SAFE&quot;, &quot;CLEAR&quot;], [23.16, &quot;CAUTION&quot;, &quot;FLOOR_LOST&quot;], [36.46, &quot;SAFE&quot;, &quot;OBSTACLE&quot;], [37.16, &quot;SAFE&quot;, &quot;CLEAR&quot;], [63.11, &quot;CAUTION&quot;, &quot;GAS_ELEVATED&quot;], [76.31, &quot;DANGER&quot;, &quot;GAS_BUILDUP&quot;], [83.76, &quot;CAUTION&quot;, &quot;GAS_ELEVATED&quot;]]</td></tr>
+<tr><th>sweep_images</th><td>15</td></tr>
+<tr><th>sweeps</th><td>3</td></tr>
+<tr><th>impacts</th><td>0</td></tr>
+<tr><th>regions_reached</th><td>{&quot;past_pit&quot;: 44.06, &quot;tunnel_b&quot;: 53.49}</td></tr>
+<tr><th>rocks_dropped</th><td>0</td></tr>
+<tr><th>max_gas_ppm_at_rover</th><td>1106.0</td></tr>
+<tr><th>min_distance_to_gas_m</th><td>1.28</td></tr>
+<tr><th>attitude_filter_max_error_deg</th><td>{&quot;pitch&quot;: 2.74, &quot;roll&quot;: 0.88, &quot;yaw_drift&quot;: 0.77}</td></tr>
+<tr><th>screenshots</th><td>[&quot;shots/00_overview.jpg&quot;, &quot;shots/02_t003.0_start.jpg&quot;, &quot;shots/03_t034.3_CAUTION_FLOOR_LOST.jpg&quot;, &quot;shots/04_t074.3_CAUTION_GAS_ELEVATED.jpg&quot;, &quot;shots/05_t087.5_DANGER_GAS_BUILDUP.jpg&quot;, &quot;shots/06_t087.5_CAUTION_GAS_ELEVATED.jpg&quot;]</td></tr>
+<tr><th>video</th><td>run.mp4</td></tr>
+<tr><th>checks</th><td>[{&quot;check&quot;: &quot;collisions &lt;= 0&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;0 collision(s) []&quot;}, {&quot;check&quot;: &quot;never falls in a pit&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;min z 0.065&quot;}, {&quot;check&quot;: &quot;reaches &#x27;past_pit&#x27;&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;t=44.06&quot;}, {&quot;check&quot;: &quot;reaches &#x27;tunnel_b&#x27;&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;t=53.49&quot;}, {&quot;check&quot;: &quot;reported DANGER GAS_BUILDUP&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;seen: [&#x27;SAFE CLEAR&#x27;, &#x27;SAFE OBSTACLE&#x27;, &#x27;CAUTION FLOOR_LOST&#x27;, &#x27;CAUTION GAS_ELEVATED&#x27;, &#x27;DANGER GAS_BUILDUP&#x27;]&quot;}, {&quot;check&quot;: &quot;ends in HOLD&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;final nav HOLD (holding: GAS_BUILDUP (press R to resume))&quot;}, {&quot;check&quot;: &quot;stops within 2.5 m of the gas source&quot;, &quot;ok&quot;: true, &quot;detail&quot;: &quot;1.28 m&quot;}]</td></tr>
+<tr><th>passed</th><td>True</td></tr>
+</table>
+<h2>Hazard events</h2>
+<h3><span class='lvl' style='color:#d98a00'>CAUTION</span> FLOOR_LOST at t=23.16 s</h3>
+<p>response=pit / no floor: back off, reroute, gas_ppm=0.0, gas_slope=0.3, front_m=0.97, tilt_deg=0.1</p>
+<div class='imgs'>
+<figure><a href='sweeps/sweep01_1_-090deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_1_-090deg_FLOOR_LOST.jpg'></a><figcaption>pan -90&deg; at t=25.55 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_2_-045deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_2_-045deg_FLOOR_LOST.jpg'></a><figcaption>pan -45&deg; at t=27.21 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_3_+000deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_3_+000deg_FLOOR_LOST.jpg'></a><figcaption>pan +0&deg; at t=28.86 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_4_+045deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_4_+045deg_FLOOR_LOST.jpg'></a><figcaption>pan +45&deg; at t=30.55 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_5_+090deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_5_+090deg_FLOOR_LOST.jpg'></a><figcaption>pan +90&deg; at t=32.26 s</figcaption></figure>
+</div>
+<h3><span class='lvl' style='color:#d98a00'>CAUTION</span> GAS_ELEVATED at t=63.11 s</h3>
+<p>response=gas elevated: proceed with caution, gas_ppm=301.1, gas_slope=69.8, front_m=0.95, tilt_deg=0.2</p>
+<div class='imgs'>
+<figure><a href='sweeps/sweep02_1_-090deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_1_-090deg_GAS_ELEVATED.jpg'></a><figcaption>pan -90&deg; at t=65.5 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_2_-045deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_2_-045deg_GAS_ELEVATED.jpg'></a><figcaption>pan -45&deg; at t=67.2 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_3_+000deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_3_+000deg_GAS_ELEVATED.jpg'></a><figcaption>pan +0&deg; at t=68.86 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_4_+045deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_4_+045deg_GAS_ELEVATED.jpg'></a><figcaption>pan +45&deg; at t=70.56 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_5_+090deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_5_+090deg_GAS_ELEVATED.jpg'></a><figcaption>pan +90&deg; at t=72.25 s</figcaption></figure>
+</div>
+<h3><span class='lvl' style='color:#d0312d'>DANGER</span> GAS_BUILDUP at t=76.31 s</h3>
+<p>response=gas build-up: stop, alert, gas_ppm=806.2, gas_slope=62.6, front_m=0.95, tilt_deg=0.0</p>
+<div class='imgs'>
+<figure><a href='sweeps/sweep03_1_-090deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_1_-090deg_GAS_BUILDUP.jpg'></a><figcaption>pan -90&deg; at t=78.7 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_2_-045deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_2_-045deg_GAS_BUILDUP.jpg'></a><figcaption>pan -45&deg; at t=80.36 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_3_+000deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_3_+000deg_GAS_BUILDUP.jpg'></a><figcaption>pan +0&deg; at t=82.06 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_4_+045deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_4_+045deg_GAS_BUILDUP.jpg'></a><figcaption>pan +45&deg; at t=83.75 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_5_+090deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_5_+090deg_GAS_BUILDUP.jpg'></a><figcaption>pan +90&deg; at t=85.45 s</figcaption></figure>
+</div>
+<h2>Navigator timeline</h2><table><tr><th>t (s)</th><th>mode</th><th>state</th><th>note</th></tr>
+<tr><td>0.06</td><td>AUTO</td><td>CALIBRATING</td><td>calibrating gyro / warming up</td></tr>
+<tr><td>2.1</td><td>AUTO</td><td>CRUISE</td><td>cruise (centring)</td></tr>
+<tr><td>17.16</td><td>AUTO</td><td>AVOID</td><td>avoid: spin right</td></tr>
+<tr><td>17.71</td><td>AUTO</td><td>CRUISE</td><td>steer left</td></tr>
+<tr><td>23.16</td><td>AUTO</td><td>SWEEP</td><td>backoff: FLOOR_LOST (left)</td></tr>
+<tr><td>34.36</td><td>AUTO</td><td>BACKOFF</td><td>backoff: FLOOR_LOST (left)</td></tr>
+<tr><td>37.3</td><td>AUTO</td><td>CRUISE</td><td>steer left</td></tr>
+<tr><td>63.11</td><td>AUTO</td><td>SWEEP</td><td>cruise</td></tr>
+<tr><td>74.36</td><td>AUTO</td><td>CRUISE</td><td>cruise (centring)</td></tr>
+<tr><td>76.31</td><td>AUTO</td><td>SWEEP</td><td>holding: GAS_BUILDUP (press R to resume)</td></tr>
+<tr><td>87.56</td><td>AUTO</td><td>HOLD</td><td>holding: GAS_BUILDUP (press R to resume)</td></tr>
+</table>
+<h2>All sweep images</h2><div class='imgs'>
+<figure><a href='sweeps/sweep01_1_-090deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_1_-090deg_FLOOR_LOST.jpg'></a><figcaption>sweep 1 (FLOOR_LOST) pan -90&deg; t=25.55 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_2_-045deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_2_-045deg_FLOOR_LOST.jpg'></a><figcaption>sweep 1 (FLOOR_LOST) pan -45&deg; t=27.21 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_3_+000deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_3_+000deg_FLOOR_LOST.jpg'></a><figcaption>sweep 1 (FLOOR_LOST) pan +0&deg; t=28.86 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_4_+045deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_4_+045deg_FLOOR_LOST.jpg'></a><figcaption>sweep 1 (FLOOR_LOST) pan +45&deg; t=30.55 s</figcaption></figure>
+<figure><a href='sweeps/sweep01_5_+090deg_FLOOR_LOST.jpg'><img src='sweeps/sweep01_5_+090deg_FLOOR_LOST.jpg'></a><figcaption>sweep 1 (FLOOR_LOST) pan +90&deg; t=32.26 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_1_-090deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_1_-090deg_GAS_ELEVATED.jpg'></a><figcaption>sweep 2 (GAS_ELEVATED) pan -90&deg; t=65.5 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_2_-045deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_2_-045deg_GAS_ELEVATED.jpg'></a><figcaption>sweep 2 (GAS_ELEVATED) pan -45&deg; t=67.2 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_3_+000deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_3_+000deg_GAS_ELEVATED.jpg'></a><figcaption>sweep 2 (GAS_ELEVATED) pan +0&deg; t=68.86 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_4_+045deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_4_+045deg_GAS_ELEVATED.jpg'></a><figcaption>sweep 2 (GAS_ELEVATED) pan +45&deg; t=70.56 s</figcaption></figure>
+<figure><a href='sweeps/sweep02_5_+090deg_GAS_ELEVATED.jpg'><img src='sweeps/sweep02_5_+090deg_GAS_ELEVATED.jpg'></a><figcaption>sweep 2 (GAS_ELEVATED) pan +90&deg; t=72.25 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_1_-090deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_1_-090deg_GAS_BUILDUP.jpg'></a><figcaption>sweep 3 (GAS_BUILDUP) pan -90&deg; t=78.7 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_2_-045deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_2_-045deg_GAS_BUILDUP.jpg'></a><figcaption>sweep 3 (GAS_BUILDUP) pan -45&deg; t=80.36 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_3_+000deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_3_+000deg_GAS_BUILDUP.jpg'></a><figcaption>sweep 3 (GAS_BUILDUP) pan +0&deg; t=82.06 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_4_+045deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_4_+045deg_GAS_BUILDUP.jpg'></a><figcaption>sweep 3 (GAS_BUILDUP) pan +45&deg; t=83.75 s</figcaption></figure>
+<figure><a href='sweeps/sweep03_5_+090deg_GAS_BUILDUP.jpg'><img src='sweeps/sweep03_5_+090deg_GAS_BUILDUP.jpg'></a><figcaption>sweep 3 (GAS_BUILDUP) pan +90&deg; t=85.45 s</figcaption></figure>
+</div>
+<p>Files: <code>hazard_log.csv</code>, <code>events.jsonl</code>, <code>metrics.json</code>, <code>sweeps/</code></p></body></html>
