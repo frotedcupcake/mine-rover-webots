@@ -114,19 +114,26 @@ class HazardFusion:
 
         # --- roof fall: impact, then a NEW obstacle ------------------------------
         if r.impact:
-            pre = [d for (tt, d) in self._dist_hist if t - tt <= c["roof_pre_window_s"]]
-            self._impact = (t, min(pre) if pre else float("inf"))
-        self._dist_hist.append((t, front))
+            pre = [d for (tt, d, _i) in self._dist_hist if t - tt <= c["roof_pre_window_s"]]
+            ir_pre = any(i for (tt, d, i) in self._dist_hist if t - tt <= c["roof_pre_window_s"])
+            self._impact = (t, min(pre) if pre else float("inf"), r.yaw_deg, ir_pre)
+        ir_now = r.ir_front_left or r.ir_front_right
+        self._dist_hist.append((t, front, ir_now))
         while self._dist_hist and t - self._dist_hist[0][0] > 2.0:
             self._dist_hist.popleft()
         if self._impact is not None:
-            ti, baseline = self._impact
+            ti, baseline, yaw_i, ir_pre = self._impact
             dt = t - ti
-            if dt > c["roof_window_s"]:
+            if dt > c["roof_window_s"] or abs(r.yaw_deg - yaw_i) > c.get("roof_max_turn_deg", 1e9):
+                # too late, or the rover has turned: what it sees now is newly in view, not new
                 self._impact = None
             else:
                 needed = c["roof_delta_m"] + c.get("roof_approach_mps", 0.0) * dt
-                if front < c["roof_obstacle_m"] and baseline - front >= needed:
+                by_sonar = front < c["roof_obstacle_m"] and baseline - front >= needed
+                # the two sonars leave a blind strip dead ahead; there the forward IRs are the
+                # evidence: tripped now, not tripped before the impact
+                by_ir = ir_now and not ir_pre and dt <= c.get("roof_ir_window_s", c["roof_window_s"])
+                if by_sonar or by_ir:
                     self._roof_until = t + c["roof_latch_s"]
                     self._impact = None
 

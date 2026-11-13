@@ -215,6 +215,25 @@ PROTO MineRover [
       Accelerometer { name "accelerometer" }
       Gyro { name "gyro" }
       InertialUnit { name "inertial_unit" }
+      # ---------------- amber status beacon (always on; makes the rover visible in the dark) ----------------
+      Pose {
+        translation %<= -L / 2 + 0.03 >% 0 %<= H / 2 + 0.03 >%
+        children [
+          Shape {
+            appearance PBRAppearance { baseColor 1 0.6 0.1 emissiveColor 1 0.6 0.1 emissiveIntensity 1.5 roughness 1 metalness 0 }
+            geometry Cylinder { radius 0.012 height 0.03 }
+            castShadows FALSE
+          }
+          PointLight {
+            location 0 0 0.12
+            attenuation 0 0 1
+            color 1 0.75 0.45
+            intensity 0.12
+            radius 2
+            castShadows FALSE
+          }
+        ]
+      }
       # ---------------- radio ----------------
       Receiver { name "receiver" channel 1 }
       Emitter { name "emitter" channel 2 }

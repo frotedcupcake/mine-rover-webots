@@ -1,0 +1,129 @@
+# Scenario results
+
+Generated 2026-11-13 07:18 by `scenarios/run_all.sh` (seeds 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20; headless fast mode).
+
+| scenario | seed 6 | seed 7 | seed 8 | seed 9 | seed 10 | seed 11 | seed 12 | seed 13 | seed 14 | seed 15 | seed 16 | seed 17 | seed 18 | seed 19 | seed 20 | pass rate |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gas_ahead | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+| mine | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+| obstacles | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+| pit_ahead | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+| ramp | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+| roof_fall | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+| side_pit | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 15/15 |
+
+**Overall: 105/105 runs passed.**
+
+## Failed checks
+
+None.
+
+## Per-run details
+
+| run | sim s | path m | collisions | fell | final nav | hazards seen | images |
+|---|---|---|---|---|---|---|---|
+| gas_ahead_s6 | 38.76 | 3.097 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s7 | 39.06 | 3.155 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s8 | 39.06 | 3.169 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s9 | 38.91 | 3.132 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s10 | 38.76 | 3.135 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s11 | 39.01 | 3.143 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s12 | 38.76 | 3.133 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s13 | 38.91 | 3.159 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s14 | 39.06 | 3.16 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s15 | 38.76 | 3.098 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s16 | 38.66 | 3.143 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s17 | 38.66 | 3.126 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s18 | 38.91 | 3.16 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s19 | 39.01 | 3.126 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| gas_ahead_s20 | 38.76 | 3.107 | 0 | False | HOLD | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 10 |
+| mine_s6 | 91.61 | 12.382 | 0 | False | HOLD | SAFE CLEAR, SAFE OBSTACLE, CAUTION FLOOR_LOST, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s7 | 91.16 | 12.383 | 0 | False | HOLD | SAFE CLEAR, SAFE OBSTACLE, CAUTION FLOOR_LOST, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s8 | 91.16 | 12.451 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s9 | 90.41 | 12.363 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s10 | 90.16 | 12.405 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s11 | 90.61 | 12.367 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s12 | 220.41 | 33.887 | 0 | False | HOLD | SAFE CLEAR, SAFE OBSTACLE, CAUTION FLOOR_LOST, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 25 |
+| mine_s13 | 89.96 | 12.423 | 0 | False | HOLD | SAFE CLEAR, SAFE OBSTACLE, CAUTION FLOOR_LOST, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s14 | 91.16 | 12.417 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s15 | 90.16 | 12.357 | 0 | False | HOLD | SAFE CLEAR, SAFE OBSTACLE, CAUTION FLOOR_LOST, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s16 | 89.21 | 12.423 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s17 | 89.61 | 12.366 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s18 | 90.16 | 12.388 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s19 | 90.86 | 12.462 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| mine_s20 | 89.71 | 12.331 | 0 | False | HOLD | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 15 |
+| obstacles_s6 | 27.74 | 6.554 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s7 | 28.26 | 6.603 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s8 | 28.26 | 6.618 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s9 | 28.26 | 6.587 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s10 | 28.56 | 6.619 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s11 | 28.74 | 6.598 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s12 | 28.14 | 6.604 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s13 | 27.69 | 6.608 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s14 | 28.68 | 6.632 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s15 | 27.63 | 6.561 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s16 | 27.66 | 6.612 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s17 | 28.26 | 6.617 | 0 | False | CRUISE | SAFE CLEAR, SAFE OBSTACLE | 0 |
+| obstacles_s18 | 27.65 | 6.617 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s19 | 27.87 | 6.576 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| obstacles_s20 | 27.46 | 6.555 | 0 | False | CRUISE | SAFE CLEAR | 0 |
+| pit_ahead_s6 | 63.81 | 6.321 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s7 | 88.51 | 9.308 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 15 |
+| pit_ahead_s8 | 29.06 | 2.515 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| pit_ahead_s9 | 67.26 | 6.583 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s10 | 88.71 | 9.661 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 15 |
+| pit_ahead_s11 | 63.91 | 6.349 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s12 | 91.21 | 9.814 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 15 |
+| pit_ahead_s13 | 60.26 | 6.28 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s14 | 58.76 | 5.948 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s15 | 63.26 | 6.228 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s16 | 63.11 | 6.351 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 10 |
+| pit_ahead_s17 | 28.91 | 2.513 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| pit_ahead_s18 | 88.71 | 9.704 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 15 |
+| pit_ahead_s19 | 89.61 | 9.446 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 15 |
+| pit_ahead_s20 | 88.66 | 9.379 | 0 | False | STUCK | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 15 |
+| ramp_s6 | 25.96 | 2.706 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s7 | 26.21 | 2.766 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s8 | 26.16 | 2.742 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s9 | 26.21 | 2.745 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s10 | 26.16 | 2.76 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s11 | 26.21 | 2.745 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s12 | 26.16 | 2.76 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s13 | 26.11 | 2.822 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s14 | 26.46 | 2.822 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s15 | 25.96 | 2.656 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s16 | 25.91 | 2.788 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s17 | 25.91 | 2.761 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s18 | 26.21 | 2.8 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s19 | 26.11 | 2.683 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| ramp_s20 | 25.96 | 2.72 | 0 | False | CRUISE | SAFE CLEAR, CAUTION TILT | 5 |
+| roof_fall_s6 | 22.21 | 1.513 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s7 | 21.96 | 1.455 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s8 | 21.96 | 1.465 | 1 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s9 | 21.96 | 1.457 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s10 | 22.21 | 1.549 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s11 | 21.96 | 1.455 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s12 | 21.96 | 1.484 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s13 | 21.96 | 1.489 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s14 | 22.06 | 1.498 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s15 | 22.06 | 1.507 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s16 | 21.86 | 1.488 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s17 | 21.96 | 1.453 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s18 | 22.06 | 1.519 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s19 | 21.96 | 1.486 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| roof_fall_s20 | 22.11 | 1.533 | 0 | False | HOLD | SAFE CLEAR, DANGER ROOF_FALL | 5 |
+| side_pit_s6 | 37.57 | 5.219 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s7 | 36.9 | 5.245 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s8 | 36.82 | 5.243 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s9 | 36.82 | 5.222 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s10 | 36.43 | 5.226 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s11 | 36.8 | 5.229 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s12 | 36.41 | 5.23 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s13 | 36.32 | 5.244 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s14 | 37.11 | 5.282 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s15 | 38.02 | 5.272 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s16 | 36.41 | 5.262 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s17 | 36.56 | 5.233 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s18 | 36.8 | 5.284 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s19 | 36.53 | 5.192 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |
+| side_pit_s20 | 36.32 | 5.18 | 0 | False | CRUISE | SAFE CLEAR, CAUTION FLOOR_LOST, SAFE OBSTACLE | 5 |

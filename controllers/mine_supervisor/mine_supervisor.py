@@ -244,7 +244,7 @@ class MineSupervisor:
         nav = f"{self.tel.get('mode', '')}/{self.tel.get('nav', '')}"
         text = f"{level}  {reason}   [{nav}]" if self.tel else "waiting for rover..."
         if text != self.label_prev:
-            self.sup.setLabel(0, text, 0.02, 0.02, 0.11, LABEL_COLOUR.get(level, 0xFFFFFF), 0.0, "Arial")
+            self.sup.setLabel(0, text, 0.02, 0.9, 0.1, LABEL_COLOUR.get(level, 0xFFFFFF), 0.0, "Arial")
             self.label_prev = text
 
     def update_camera(self, p, yaw):
@@ -256,12 +256,12 @@ class MineSupervisor:
         k = 0.03
         dyaw = (yaw - cyaw + math.pi) % (2 * math.pi) - math.pi
         cyaw += k * 0.7 * dyaw
-        tx, ty = p[0] - 0.95 * math.cos(cyaw), p[1] - 0.95 * math.sin(cyaw)
+        tx, ty = p[0] - 1.05 * math.cos(cyaw), p[1] - 1.05 * math.sin(cyaw)
         cx += k * 3 * (tx - cx)
         cy += k * 3 * (ty - cy)
         self.cam_state = [cx, cy, cyaw]
         look = math.atan2(p[1] - cy, p[0] - cx)
-        pitch = 0.36
+        pitch = 0.5
         # orientation = Rz(look) * Ry(pitch) as axis-angle
         cz, sz, cp_, sp = math.cos(look), math.sin(look), math.cos(pitch), math.sin(pitch)
         m = [[cz * cp_, -sz, cz * sp], [sz * cp_, cz, sz * sp], [-sp, 0, cp_]]
@@ -271,13 +271,43 @@ class MineSupervisor:
         else:
             s = 2 * math.sin(ang)
             axis = [(m[2][1] - m[1][2]) / s, (m[0][2] - m[2][0]) / s, (m[1][0] - m[0][1]) / s]
-        self.view.getField("position").setSFVec3f([cx, cy, 0.72])
+        self.view.getField("position").setSFVec3f([cx, cy, 0.82])
         self.view.getField("orientation").setSFRotation(axis + [ang])
+
+    def overview_shot(self, t):
+        """Cut-away view from above (the roof is one-sided), if the scenario defines one."""
+        ov = (self.scenario or {}).get("overview")
+        if not ov or self.view is None:
+            return
+        # the mine is dark and foggy: light it and clear the fog just for this one picture
+        children = self.sup.getRoot().getField("children")
+        children.importMFNodeFromString(-1, "DEF OVERVIEW_LIGHT DirectionalLight "
+                                            "{ direction 0.25 0.15 -1 intensity 1.6 castShadows FALSE }")
+        fog = self.sup.getFromDef("FOG")
+        fog_range = fog.getField("visibilityRange").getSFFloat() if fog else None
+        if fog:
+            fog.getField("visibilityRange").setSFFloat(500.0)
+        self.view.getField("position").setSFVec3f(ov["position"])
+        self.view.getField("orientation").setSFRotation(ov["orientation"])
+        for _ in range(3):
+            self.sup.step(self.ts)
+        d = os.path.join(self.run_dir, "shots")
+        os.makedirs(d, exist_ok=True)
+        path = os.path.join(d, "00_overview.jpg")
+        self.sup.exportImage(path, 92)
+        self.shots.append(path)
+        light = self.sup.getFromDef("OVERVIEW_LIGHT")
+        if light:
+            light.remove()
+        if fog:
+            fog.getField("visibilityRange").setSFFloat(fog_range)
+        self.cam_state = None
 
     def take_shots(self, t):
         keep = []
         for due, name in self.shot_queue:
-            if t >= due:
+            # wait for the camera sweep to finish: its overlay would cover the 3D view
+            if t >= due and (not self.tel.get("sweeping") or name == "end"):
                 d = os.path.join(self.run_dir, "shots")
                 os.makedirs(d, exist_ok=True)
                 path = os.path.join(d, f"{len(self.shots) + 1:02d}_t{t:05.1f}_{name}.jpg")
@@ -417,8 +447,9 @@ class MineSupervisor:
                     self.video_path = os.path.join(self.run_dir, "run.mp4")
                     sup.movieStartRecording(self.video_path, 1280, 720, 0, 90, 1, False)
                     print(f"[sup] recording video to {self.video_path}", flush=True)
-                if self.want_shots and k == 60:
-                    self.shot_queue.append((t, "start"))
+                if self.want_shots and k == 250:             # 2.5 s: scene fully loaded and lit
+                    self.overview_shot(t)
+                    self.shot_queue.append((t + 0.5, "start"))
                 self.take_shots(t)
             if t >= next_save:
                 next_save = t + 5.0
@@ -443,12 +474,15 @@ class MineSupervisor:
                 break
         if self.video_path:
             sup.movieStopRecording()
-            waited = 0
-            while not sup.movieIsReady() and waited < 3000:
+            sup.simulationSetMode(sup.SIMULATION_MODE_REAL_TIME)
+            t_wall = time.time()                       # encoding runs in wall-clock time
+            while not sup.movieIsReady() and not sup.movieFailed() and time.time() - t_wall < 300:
                 if sup.step(self.ts) == -1:
                     break
-                waited += 1
-            print(f"[sup] video {'FAILED' if sup.movieFailed() else 'saved'}: {self.video_path}", flush=True)
+            ok = sup.movieIsReady() and not sup.movieFailed() and os.path.exists(self.video_path)
+            print(f"[sup] video {'saved' if ok else 'FAILED'}: {self.video_path}", flush=True)
+            if not ok:
+                self.video_path = None
         m = self.metrics(sup.getTime(), final=True)
         print(f"[sup] scenario '{self.scenario.get('name')}' seed {self.seed}: "
               f"{'PASS' if m.get('passed') else 'FAIL'}", flush=True)

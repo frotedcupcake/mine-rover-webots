@@ -9,7 +9,7 @@ PROTO GasMarker [
   field SFString name         "gas marker"
   field SFFloat  radius       0.6
   field SFColor  color        0.35 1 0.45
-  field SFFloat  transparency 0.86
+  field SFFloat  transparency 0.88
   field SFFloat  glow         0.25     # intensity of the green point light (0 = off)
 ]
 {
@@ -21,8 +21,6 @@ PROTO GasMarker [
       Shape {
         appearance PBRAppearance {
           baseColor IS color
-          emissiveColor IS color
-          emissiveIntensity 0.35
           transparency IS transparency
           roughness 1
           metalness 0

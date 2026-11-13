@@ -49,13 +49,22 @@ def run_one(name, seed=1, gui=False, render=None, video=False, shots=False, time
     text = re.sub(r"randomSeed \d+", f"randomSeed {int(seed)}", text, count=1)
     with open(tmp, "w") as fh:
         fh.write(text)
+    proj = os.path.join(ROOT, "worlds", f"._run_{run}.wbproj")
+    if video or shots:
+        # hide the rover camera overlay so it does not cover the recorded 3D view
+        with open(proj, "w") as fh:
+            fh.write("Webots Project File version R2025a\nrenderingDevicePerspectives: rover:camera;0;1;0;0\n")
     env = dict(os.environ, MINE_SCENARIO=spath, MINE_SEED=str(seed), MINE_RUN=run,
                MINE_RENDER="1" if render else "0", MINE_VIDEO="1" if video else "0",
                MINE_SHOTS="1" if shots else "0")
     if gui:
         cmd = [WEBOTS, "--mode=realtime", "--stdout", "--stderr", tmp]
     else:
-        cmd = [WEBOTS, "--batch", "--mode=fast", "--stdout", "--stderr", "--minimize"]
+        # video/screenshots need every frame drawn: real time. Everything else: fast mode.
+        mode = "realtime" if (video or shots) else "fast"
+        cmd = [WEBOTS, "--batch", f"--mode={mode}", "--stdout", "--stderr"]
+        if not (video or shots):
+            cmd.append("--minimize")        # a minimised window records black video frames
         if not render:
             cmd.append("--no-rendering")
         cmd.append(tmp)

@@ -11,4 +11,5 @@ worlds/_run_*.wbt
 reports/*
 !reports/demo/
 !reports/scenario_results.md
+!reports/scenario_results_seeds6-20.md
 !reports/.gitkeep

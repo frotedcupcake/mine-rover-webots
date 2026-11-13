@@ -1,0 +1,86 @@
+solid chassis_placeholder
+ facet normal -1 0 0
+  outer loop
+   vertex -0.125 -0.0715 -0.035
+   vertex -0.125 -0.0715 0.035
+   vertex -0.125 0.0715 0.035
+  endloop
+ endfacet
+ facet normal -1 0 0
+  outer loop
+   vertex -0.125 -0.0715 -0.035
+   vertex -0.125 0.0715 0.035
+   vertex -0.125 0.0715 -0.035
+  endloop
+ endfacet
+ facet normal 1 0 0
+  outer loop
+   vertex 0.125 -0.0715 -0.035
+   vertex 0.125 0.0715 -0.035
+   vertex 0.125 0.0715 0.035
+  endloop
+ endfacet
+ facet normal 1 0 0
+  outer loop
+   vertex 0.125 -0.0715 -0.035
+   vertex 0.125 0.0715 0.035
+   vertex 0.125 -0.0715 0.035
+  endloop
+ endfacet
+ facet normal 0 -1 0
+  outer loop
+   vertex -0.125 -0.0715 -0.035
+   vertex 0.125 -0.0715 -0.035
+   vertex 0.125 -0.0715 0.035
+  endloop
+ endfacet
+ facet normal 0 -1 0
+  outer loop
+   vertex -0.125 -0.0715 -0.035
+   vertex 0.125 -0.0715 0.035
+   vertex -0.125 -0.0715 0.035
+  endloop
+ endfacet
+ facet normal 0 1 0
+  outer loop
+   vertex -0.125 0.0715 -0.035
+   vertex -0.125 0.0715 0.035
+   vertex 0.125 0.0715 0.035
+  endloop
+ endfacet
+ facet normal 0 1 0
+  outer loop
+   vertex -0.125 0.0715 -0.035
+   vertex 0.125 0.0715 0.035
+   vertex 0.125 0.0715 -0.035
+  endloop
+ endfacet
+ facet normal 0 0 -1
+  outer loop
+   vertex -0.125 -0.0715 -0.035
+   vertex -0.125 0.0715 -0.035
+   vertex 0.125 0.0715 -0.035
+  endloop
+ endfacet
+ facet normal 0 0 -1
+  outer loop
+   vertex -0.125 -0.0715 -0.035
+   vertex 0.125 0.0715 -0.035
+   vertex 0.125 -0.0715 -0.035
+  endloop
+ endfacet
+ facet normal 0 0 1
+  outer loop
+   vertex -0.125 -0.0715 0.035
+   vertex 0.125 -0.0715 0.035
+   vertex 0.125 0.0715 0.035
+  endloop
+ endfacet
+ facet normal 0 0 1
+  outer loop
+   vertex -0.125 -0.0715 0.035
+   vertex 0.125 0.0715 0.035
+   vertex -0.125 0.0715 0.035
+  endloop
+ endfacet
+endsolid chassis_placeholder

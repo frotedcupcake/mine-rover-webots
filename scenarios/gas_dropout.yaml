@@ -1,0 +1,17 @@
+# (addition) The gas radio link goes silent for 3 s: data older than 0.5 s must give
+# CAUTION STALE_DATA and stop the rover; it carries on when the data comes back.
+name: gas_dropout
+world: corridor
+duration: 40
+render: false
+start_jitter: {x: 0.05, y: 0.08, yaw_deg: 5}
+regions:
+  moved_on: {x_min: 3.2}
+events:
+  - {t: 5.0, do: gas_dropout, seconds: 3.0}
+end_when: {seen: ["CAUTION STALE_DATA"], reach: moved_on, settle_s: 0.5}
+expect:
+  seen: ["CAUTION STALE_DATA"]
+  reach: [moved_on]
+  max_collisions: 0
+  no_fall: true

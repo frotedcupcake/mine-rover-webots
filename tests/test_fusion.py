@@ -128,6 +128,25 @@ def test_obstacle_without_impact_is_not_roof_fall(cfg):
     assert all(x.level == SAFE for x in out)
 
 
+def test_obstacle_swinging_into_view_after_a_bump_is_not_roof_fall(cfg):
+    # (addition) the rover bumps, then turns 40 degrees and the sonar picks up a wall
+    def make(t):
+        return mk(t, impact=abs(t - 2.0) < 1e-6, yaw_deg=(40.0 if t >= 2.3 else 0.0),
+                  us_left=(0.40 if t >= 2.5 else None))
+    assert all(x.level == SAFE for x in run(HazardFusion(cfg), 0, 6, make))
+
+
+def test_roof_fall_seen_only_by_forward_ir(cfg):
+    # (addition) rock lands in the sonar blind strip dead ahead: the front IR is the evidence
+    def make(t):
+        return mk(t, impact=abs(t - 2.0) < 1e-6, ir_front_left=t >= 2.4)
+    assert any(x.reason == ROOF_FALL for x in run(HazardFusion(cfg), 0, 4, make))
+
+    def already(t):       # IR was already tripped before the knock: just a bump
+        return mk(t, impact=abs(t - 2.0) < 1e-6, ir_front_left=t >= 1.8)
+    assert all(x.reason != ROOF_FALL for x in run(HazardFusion(cfg), 0, 6, already))
+
+
 def test_roof_fall_latches_15s(cfg):
     def make(t):
         return mk(t, impact=abs(t - 2.0) < 1e-6, us_left=(0.30 if 2.3 <= t < 3.0 else None))

@@ -356,7 +356,7 @@ Background {{
   skyColor [ 0.012 0.011 0.01 ]
   luminosity 1
 }}
-Fog {{
+DEF FOG Fog {{
   color 0.02 0.018 0.015
   fogType "EXPONENTIAL"
   visibilityRange 16
