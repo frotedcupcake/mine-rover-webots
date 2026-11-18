@@ -100,6 +100,8 @@ navigator:
   # RETURN mode (no operator underground): blocked ahead, battery reserve, mission timer or a
   # finished Danger hold turn the rover round; it steers on route heading + 180 deg.
   danger_hold_s: 30          # on DANGER: stop, finish the sweep, log, hold this long, then RETURN
+  danger_rearm_ratio: 0.8    # gas the rover has held for can stop it again only after the reading
+                             #   has fallen below this x the Danger threshold (640 / 2400 ppm) and risen again
   mission_time_s: 900        # 15 min after the trip starts -> RETURN (backstop)
   return_time_factor: 1.2    # HOME when return driving time reaches this x outward driving time
                              #   (or as soon as the link is back); driving only, not sweeps/holds

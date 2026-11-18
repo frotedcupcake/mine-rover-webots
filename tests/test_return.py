@@ -539,6 +539,40 @@ def test_danger_re_arms_after_the_gas_falls_below_the_threshold_and_rises_again(
     assert STUCK not in rig.states()
 
 
+def test_noise_around_the_threshold_during_the_hold_does_not_re_arm(cfg):
+    """Found in Webots (gas_return n1s0): the rover held at ~800 ppm, one sample of 791 re-armed
+    the stop and it held again 0.3 m further into the same pocket."""
+    rig = TripRig(cfg, length=90.0, x=20.0)
+    rig.link = False
+    rig.run(40.0)
+    t0 = rig.t
+    rig.gas = lambda t: min(800.0, 200.0 + 150.0 * (t - t0)) + (-10.0 if int(t * 20) % 7 == 0 else 6.0)
+    rig.until(lambda: rig.cmd.state == HOLD, 15)
+    rig.until(lambda: returning(rig), 31)
+    t1 = rig.t
+    rig.gas = lambda t: min(1400.0, 800.0 + 100.0 * (t - t1))    # driving on: the reading climbs again
+    rig.run(15.0)
+    assert HOLD not in [h[1] for h in rig.hist if h[0] >= t1]
+    assert cfg["navigator"]["danger_rearm_ratio"] == 0.8
+
+
+def test_re_arm_needs_the_reading_below_80_percent_of_the_threshold(cfg):
+    rig = danger_rig(cfg)
+    rig.until(lambda: returning(rig), 31)
+    rig.until(lambda: rig.cmd.state == CRUISE, 10)
+    rig.gas = 700.0                                   # below 800 but not below 640: still the same gas
+    rig.run(8.0)
+    t0 = rig.t
+    rig.gas = lambda t: min(1500.0, 700.0 + 150.0 * (t - t0))
+    rig.run(10.0)
+    assert HOLD not in [h[1] for h in rig.hist if h[0] >= t0]
+    rig.gas = 600.0                                   # below 640: cleared
+    rig.run(8.0)
+    t1 = rig.t
+    rig.gas = lambda t: min(1500.0, 600.0 + 150.0 * (t - t1))
+    rig.until(lambda: rig.cmd.state == HOLD, 15)
+
+
 def test_extreme_gas_is_also_left_after_the_hold(cfg):
     rig = TripRig(cfg, length=90.0, x=20.0)
     rig.link = False

@@ -164,9 +164,14 @@ each was reported at checkpoint 1.
 - **Danger hold timer starts after the sweep** and is not restarted by later sweeps in the same
   hold. `R` (link up, level no longer DANGER) still resumes early.
 - **Danger re-arm.** A Danger finding the rover has held for is ignored until it clears: gas
-  build-up until the reading is below `gas_danger_ppm`, extreme gas until below
-  `gas_extreme_ppm`, roof fall until its latch expires. Fusion still reports DANGER; only the
-  stop is suppressed. Sweeps still run.
+  build-up until the reading is below `danger_rearm_ratio` (0.8) x `gas_danger_ppm` = 640 ppm,
+  extreme gas until below 0.8 x `gas_extreme_ppm` = 2400 ppm, roof fall until its latch
+  expires. Fusion still reports DANGER; only the stop is suppressed. Sweeps still run.
+  The 0.8 margin is the user's decision (2026-11-14) after `gas_return` n1s0 failed: the rover
+  held at about 800 ppm, one noisy sample of 791 counted as "below the threshold", and it
+  stopped a third time 0.3 m further into the same pocket.
+- **On the way back the rover drives through a gas pocket it has held for** (it is the only
+  way out). The reading can pass 2000 ppm there; the log shows DANGER while it keeps moving.
 - **Battery.** `rover_core/battery.py`. The navigator gets a `BatteryStatus` whose level comes
   from the 5 s average voltage alone and latches (OK -> RETURN -> WARN -> CRITICAL). Nothing is
   judged until 5 s of data exist. CRITICAL zeroes the motors in every mode; in AUTO the state

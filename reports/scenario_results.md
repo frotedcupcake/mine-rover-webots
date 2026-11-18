@@ -1,6 +1,6 @@
 # Scenario results
 
-Generated 2026-11-13 20:19 by `scenarios/run_all.sh` (noise/shift seeds n1s0, n0s0, n1s1, n2s2, n3s3, n4s4, n5s5; headless fast mode).
+Generated 2026-11-14 03:26 by `scenarios/run_all.sh` (noise/shift seeds n1s0, n0s0, n1s1, n2s2, n3s3, n4s4, n5s5; headless fast mode).
 
 | scenario | n1s0 | n0s0 | n1s1 | n2s2 | n3s3 | n4s4 | n5s5 | pass rate |
 |---|---|---|---|---|---|---|---|---|
@@ -10,7 +10,7 @@ Generated 2026-11-13 20:19 by `scenarios/run_all.sh` (noise/shift seeds n1s0, n0
 | danger_return | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 | gas_ahead | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 | gas_dropout | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
-| gas_return | FAIL | PASS | PASS | PASS | PASS | PASS | PASS | 6/7 |
+| gas_return | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 | mine | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 | mission_timer | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 | obstacles | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
@@ -20,11 +20,11 @@ Generated 2026-11-13 20:19 by `scenarios/run_all.sh` (noise/shift seeds n1s0, n0
 | roof_fall | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 | side_pit | PASS | PASS | PASS | PASS | PASS | PASS | PASS | 7/7 |
 
-**Overall: 104/105 runs passed.**
+**Overall: 105/105 runs passed.**
 
 ## Failed checks
 
-- `gas_return_n1s0` (ok): 2 Danger hold(s) (t=53.355 GAS_BUILDUP 30.0 s (IN); t=116.405 GAS_BUILDUP 30.0 s (RETURN); t=158.705 GAS_BUILDUP 30.0 s (RETURN))
+None.
 
 ## Per-run details
 
@@ -72,7 +72,7 @@ Generated 2026-11-13 20:19 by `scenarios/run_all.sh` (noise/shift seeds n1s0, n0
 | gas_dropout_n3s3 | 16.78 | 2.77 | 0 | False | CRUISE | SAFE CLEAR, CAUTION STALE_DATA | 0 |
 | gas_dropout_n4s4 | 16.78 | 2.771 | 0 | False | CRUISE | SAFE CLEAR, CAUTION STALE_DATA | 0 |
 | gas_dropout_n5s5 | 16.6 | 2.731 | 0 | False | CRUISE | SAFE CLEAR, CAUTION STALE_DATA | 0 |
-| gas_return_n1s0 | 211.76 | 13.303 | 0 | False | HOME | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 30 |
+| gas_return_n1s0 | 170.41 | 13.294 | 0 | False | HOME | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 25 |
 | gas_return_n0s0 | 171.41 | 13.308 | 0 | False | HOME | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 25 |
 | gas_return_n1s1 | 170.91 | 13.367 | 0 | False | HOME | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 25 |
 | gas_return_n2s2 | 170.76 | 13.279 | 0 | False | HOME | SAFE CLEAR, CAUTION GAS_ELEVATED, DANGER GAS_BUILDUP | 25 |

@@ -468,12 +468,14 @@ class Navigator:
         return f"holding: {self._hold_reason} ({self.n['danger_hold_s']:.0f} s, then return)"
 
     def _rearm(self, a):
-        f = self.cfg["fusion"]
+        # "fallen below the threshold" needs a margin: a rover holding right at the threshold
+        # reads a few ppm either side of it, and one low sample must not re-arm the stop
+        f, k = self.cfg["fusion"], self.n["danger_rearm_ratio"]
         for h in list(self._disarmed):
             if h == GAS_BUILDUP:
-                clear = a.gas_ppm is not None and a.gas_ppm < f["gas_danger_ppm"]
+                clear = a.gas_ppm is not None and a.gas_ppm < k * f["gas_danger_ppm"]
             elif h == GAS_EXTREME:
-                clear = a.gas_ppm is not None and a.gas_ppm < f["gas_extreme_ppm"]
+                clear = a.gas_ppm is not None and a.gas_ppm < k * f["gas_extreme_ppm"]
             else:
                 clear = h not in a.hazards
             if clear:
